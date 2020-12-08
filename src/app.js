@@ -3,7 +3,7 @@ import './app.css';
 import { hot } from 'react-hot-loader';
 import Papa from 'papaparse';
 import moment from 'moment';
-import DeckGL from 'deck.gl';
+import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
 import { StaticMap } from 'react-map-gl';
 import { renderTracks } from './track.js';
 import Graph from './graph.js';
@@ -11,12 +11,12 @@ import Slider from './slider.js';
 
 
 const INITIAL_MAP_VIEW = {
-  longitude: 34.526290,
-  latitude: -3.168381,
-  zoom: 8,
+  longitude: 0,
+  latitude: 0,
+  zoom: 2,
   bearing: 0,
   pitch: 30
-}
+};
 
 const MAPBOX_TOKEN = 'pk.eyJ1IjoicmFmZm1hcmVzIiwiYSI6ImNqOGYwdXd6YTE0ZnczMm1uMTF0NzZnbDYifQ.apQdLo_KQAc1jDQIKKTDHQ';
 
@@ -45,20 +45,22 @@ const timestamps = []; //unique time stamps as strings for display
 let sampleInterval = 0;
 let maxTime = 0; //for X axis of graph (and range slider steps if using continuous time)
 let utsLength = 0; //for range slider steps (not using continous time)
-// let tailLengthFactor = Number(document.getElementById('tailLength-slider').value) * -1;
-let tailLengthFactor = 2;
 let tailLength = 0;
 // let speed = Number(document.getElementById('speed-slider').value);
 let speed = 1;
-let t = 0; // time index for drawTracks function (allows skipping time stamps with no data)
+let t0 = 0; //starting time index for sliderTime and timeRange
+let t = 0; //time index for drawTracks function (allows skipping time stamps with no data)
 let cTime = 0; //current time for deck gl layers
+let time0 = 0; //start time for calculating tailLength
 let displayTime = 0; //current time for display
-let sliderTime = [0];
+let sliderTime = [0, 0];
+let timeRange = [0, 0];
 const tracks = [];
-// var markers = [];
+const markers = [];
 
 let playback = undefined;
-let playbackState = 0;
+let playbackState = 0; //for playback button text
+let playbackType = 0; //for moving window playback
 let maxfps = 60; //animation speed as frames per second, for drawTracks function
 let interval = 1000/maxfps; //for drawTracks function
 let now = Date.now(); //for drawTracks function
@@ -232,7 +234,8 @@ const loadData = (event) => {
       utsLength = uniqueTimestamps.length - 1;
       //4. round time stamps per individual to nearest multiple of sample interval
       //... interpolate missing data (based on time stamps that exist in data)
-      //... and calculate distance between subsequent locations (for graph)
+      //... calculate distance between subsequent non-interpolated locations (for graph)
+      //... push markers, tracks and graph data to objects
       for (let i = 0; i < ids; i++) {
         let newTime = 0;
         let prevTime = 0;
@@ -243,12 +246,14 @@ const loadData = (event) => {
         let newJ = 0;
         while (j < datetimes[i].length) {
           newTime = Math.round((datetimes[i][j] - minTimestamp) / sampleInterval);
+          //push markers with no interpolation
+          let marker = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i][j],timestamps:newTime};
+          markers.push(marker);
           if (j !== 0) {
             //check if any missing data based on datetimes and interpolate
             tDiff = newTime - prevTime;
             newJ = Number(j);
             if (tDiff > 1) {
-              // newDistance = 0;
               for (let k = 1; k < tDiff; k++) {
                 let iTime = prevTime + k;
                 if (uniqueTimes.indexOf(iTime, newJ - 1) > 0) { //for non-continuous sampling
@@ -256,7 +261,6 @@ const loadData = (event) => {
                   newCoords = interPoint(coords[i][newJ - 1][1], coords[i][newJ - 1][0], coords[i][newJ][1], coords[i][newJ][0], 1/(tDiff - (k - 1)));
                   newCoords.push(coords[i][newJ - 1][2]); //add altitude data
                   coords[i].splice(newJ, 0, newCoords);
-                  // distance[i].push({x: iTime, y: newDistance}); //don't interpolate this
                   newJ = newJ + 1;
                 }
               }
@@ -274,27 +278,17 @@ const loadData = (event) => {
           distance[i].push({x: newTime, y: newDistance});
           prevTime = Number(newTime);
         }
-      }
-      displayTime = timestamps[0];
-      tailLength = Math.round(maxTime / tailLengthFactor);
-      //create required number of track and marker features, and series for graph based on number of individuals in dataset
-      for (let i = 0; i < ids; i++) {
+        //create track data...
         let track = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i],timestamps:datetimes[i]};
+        tracks.push(track);
+        //create plot data...
         let series = {key:i,data:[],color:rgbToHex(colour[i]),size:3};
         if (datetimes[i][0] === 0) {
           series.data = [distance[i][0]];
         }
-        // let marker = {id:i,species:species[i],animal:animal_id[i],colour:colour[i],coordinates:[]};
-        // if (datetimes[i].indexOf(cTime) == 0) {
-        //   marker.coordinates = [coords[i][0][0],coords[i][0][1],coords[i][0][2]];
-        //   pJ[i] = 0;
-        // } else {
-        //   pJ[i] = -1;
-        // }
-        tracks.push(track);
         plotData.push(series);
-        // markers.push(marker);
       }
+      displayTime = timestamps[0];
     }
   });
 }
@@ -303,43 +297,111 @@ const loadData = (event) => {
 class App extends Component {
 
   state = {
-    cMapStyle: 'mapbox://styles/mapbox/light-v9',
+    mapView: INITIAL_MAP_VIEW,
+    baseMap: 'mapbox://styles/mapbox/light-v9',
     trackData: [],
     trackTrail: 0,
     trackTime: 0,
+    markerData: [],
+    markerFilter: [0, 0],
+    markerVisible: true,
     counterTime: '',
-    sliderValue: [0],
+    sliderValue: [0, 0],
     sliderSteps: 10,
     maxTimeVal: 0,
+    graphVisible: 'hidden',
     graphData: [],
     graphMaxY: 0,
     minTS: 0,
     tsInterval: 0,
-    playButton: 'play'
+    playButton: 'play',
+    playTypeButton: 'all',
+    playbackSpeed: speed
   };
+
+  flyToData = () => {
+    let w = window.innerWidth;
+    let h = window.innerHeight;
+    const { longitude, latitude, zoom } = new WebMercatorViewport({ width: w, height: h }).fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: {top: 10, bottom: 200, left: 10, right: 10} });
+    const NEW_MAP_VIEW = {
+      longitude,
+      latitude,
+      zoom,
+      bearing: 0,
+      pitch: 30,
+      transitionDuration: 1000,
+      transitionInterpolator: new FlyToInterpolator()
+    };
+    this.setState({
+      mapView: NEW_MAP_VIEW,
+      trackData: tracks,
+      trackTrail: tailLength,
+      trackTime: cTime,
+      markerData: markers,
+      markerFilter: timeRange,
+      counterTime: displayTime,
+      sliderValue: sliderTime,
+      sliderSteps: utsLength,
+      maxTimeVal: maxTime,
+      graphData: plotData,
+      graphMaxY: maxDist,
+      minTS: minTimestamp,
+      tsInterval: sampleInterval
+    });
+  }
+
+  toggleMapStyle = () => {
+    if (this.state.baseMap === 'mapbox://styles/mapbox/light-v9') {
+      this.setState({ baseMap: 'mapbox://styles/mapbox/satellite-v9' });
+    } else {
+      this.setState({ baseMap: 'mapbox://styles/mapbox/light-v9' });
+    }
+  }
 
   startPlotting = () => {
     if (playbackState === 0) {
-      this.setState({
-        trackData: tracks,
-        trackTrail: tailLength,
-        trackTime: cTime,
-        counterTime: displayTime,
-        sliderValue: sliderTime,
-        sliderSteps: utsLength,
-        maxTimeVal: maxTime,
-        graphData: plotData,
-        graphMaxY: maxDist,
-        minTS: minTimestamp,
-        tsInterval: sampleInterval,
-        playButton: 'stop'
-      });
+      this.setState({ playButton: 'stop' });
       playbackState = 1;
       this.drawTracks();
     } else if (playbackState === 1) {
       playbackState = 0;
       cancelAnimationFrame(playback);
       this.setState({ playButton: 'play' });
+    }
+  }
+
+  playSpeed = () => {
+    if (speed === 16) {
+      speed = 1;
+    } else {
+      speed = speed * 2;
+    }
+    this.setState({ playbackSpeed: speed });
+  }
+
+  playType = () => {
+    if (playbackType === 0) {
+      playbackType = 1;
+      this.setState({ playTypeButton: 'window' });
+    } else {
+      playbackType = 0;
+      this.setState({ playTypeButton: 'all' });
+    }
+  }
+
+  markerVisibility = () => {
+    if (this.state.markerVisible === true) {
+      this.setState({ markerVisible: false });
+    } else {
+      this.setState({ markerVisible: true });
+    }
+  }
+
+  graphVisibility = () => {
+    if (this.state.graphVisible === 'visible') {
+      this.setState({ graphVisible: 'hidden' });
+    } else {
+      this.setState({ graphVisible: 'visible' });
     }
   }
 
@@ -354,18 +416,18 @@ class App extends Component {
     now = Date.now();
     delta = now - then;
     if (delta > interval) {
-      // cTime = cTime + speed; //for continuous time, regardless of missing time stamps
       t = t + speed;
       cTime = uniqueTimes[t];
       if (cTime <= maxTime) {
-        // sliderTime = [sliderTime[0] + speed]; //for continuous time
-        // displayTime = timestamps[cTime]; //for continuous time
-        sliderTime = [t];
+        if (playbackType === 1) {
+          t0 = t0 + speed;
+        }
+        time0 = uniqueTimes[t0];
+        tailLength = cTime - time0;
+        timeRange = [time0, cTime];
+        sliderTime = [t0, t];
         displayTime = timestamps[t];
         for (let i = 0; i < ids; i++) {
-          // if (datetimes[i][cTime] === cTime) { //for continuous time
-            // plotData[i].data = [distance[i][cTime]]; //for continuous time
-          // let j = datetimes[i].indexOf(cTime);
           let j = distance[i].findIndex(d => d.x === cTime); //skips interpolated time stamps
           if (j >= 0) {
             plotData[i].data = [distance[i][j]];
@@ -374,10 +436,11 @@ class App extends Component {
           } else {
             plotData[i].data = [];
           }
-          // }
         }
         this.setState({
           trackTime: cTime,
+          trackTrail: tailLength,
+          markerFilter: timeRange,
           counterTime: displayTime,
           sliderValue: sliderTime,
           graphData: plotData
@@ -398,17 +461,15 @@ class App extends Component {
       this.setState({ playButton: 'play' });
     }
     this.setState({ sliderValue });
-    // cTime = sliderValue[0]; //for continous time
-    // sliderTime = [cTime];
-    // displayTime = timestamps[cTime];
-    t = sliderValue[0];
+    t0 = sliderValue[0];
+    t = sliderValue[1];
+    time0 = uniqueTimes[t0];
     cTime = uniqueTimes[t];
-    sliderTime = [t];
+    tailLength = cTime - time0;
+    timeRange = [time0, cTime];
+    sliderTime = [t0, t];
     displayTime = timestamps[t];
     for (let i = 0; i < ids; i++) {
-      // if (datetimes[i][cTime] === cTime) { //for continuous time
-        // plotData[i].data = [distance[i][cTime]]; //for continuous time
-      // let j = datetimes[i].indexOf(cTime);
       let j = distance[i].findIndex(d => d.x === cTime); //skips interpolated time stamps
       if (j >= 0) {
         plotData[i].data = [distance[i][j]];
@@ -421,6 +482,8 @@ class App extends Component {
     }
     this.setState({
       trackTime: cTime,
+      trackTrail: tailLength,
+      markerFilter: timeRange,
       counterTime: displayTime,
       graphData: plotData
     });
@@ -428,22 +491,19 @@ class App extends Component {
 
 
   render() {
-    const {trackData, trackTrail, trackTime, counterTime, maxTimeVal, sliderSteps, sliderValue, cMapStyle, playButton} = this.state;
+    const {counterTime, sliderSteps, sliderValue, mapView, baseMap, playButton, playbackSpeed, playTypeButton} = this.state;
 
     return (
       <div>
         <DeckGL
-          layers={renderTracks({
-            data: trackData,
-            trailLength: trackTrail,
-            currentTime: trackTime
-          })}
-          initialViewState={INITIAL_MAP_VIEW}
+          layers={renderTracks({...this.state})}
+          getTooltip={({object}) => object && `${object.species}\n${object.animal}\n${moment.utc((object.timestamps * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm:ss')}`}
+          initialViewState={mapView}
           controller={true}
         >
           <StaticMap
             mapboxApiAccessToken={MAPBOX_TOKEN}
-            mapStyle={cMapStyle}
+            mapStyle={baseMap}
           >
           </StaticMap>
         </DeckGL>
@@ -453,7 +513,13 @@ class App extends Component {
         <Graph {...this.state} />
         <div className='buttons'>
           <input type='file' onChange={loadData} />
-          <button onClick={this.startPlotting}>{playButton}</button>
+          <button style={{width: '60px'}} onClick={this.flyToData}>fly</button>
+          <button style={{width: '60px'}} onClick={this.startPlotting}>{playButton}</button>
+          <button style={{width: '60px'}} onClick={this.playSpeed}>x{playbackSpeed}</button>
+          <button style={{width: '60px'}} onClick={this.playType}>{playTypeButton}</button>
+          <button style={{width: '60px'}} onClick={this.markerVisibility}>points</button>
+          <button style={{width: '60px'}} onClick={this.graphVisibility}>graph</button>
+          <button style={{width: '60px'}} onClick={this.toggleMapStyle}>map</button>
         </div>
         <Slider
           max={sliderSteps}
