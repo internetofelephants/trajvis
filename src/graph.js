@@ -9,9 +9,9 @@ import {
 } from 'react-vis';
 import moment from 'moment';
 
-export default function Graph( {graphData, maxTimeVal, graphMaxY, minTS, tsInterval} ) {
+export default function Graph( {graphDisplay, graphData, maxTimeVal, graphMaxY, minTS, tsInterval} ) {
   return (
-    <div className='graph'>
+    <div className='graph' style={{visibility: graphDisplay}}>
       <FlexibleWidthXYPlot
         height={140}
         xDomain={[0, maxTimeVal]}

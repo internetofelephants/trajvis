@@ -25,16 +25,15 @@ body {
 
 .rangeslider {
   position: absolute;
-  bottom: 40px;
+  bottom: 60px;
   left: 0;
-  height: 20px;
-  width: 96vw;
-  padding: 0 20px 0 20px;
+  height: 40px;
+  width: 100vw;
 }
 
 .graph {
   position: absolute;
-  bottom: 60px;
+  bottom: 100px;
   left: 0;
   height: 140px;
   width: 100vw;
