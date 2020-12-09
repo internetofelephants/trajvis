@@ -10,7 +10,7 @@ export function renderTracks(props) {
       getTimestamps: d => d.timestamps,
       getColor: d => d.colour,
       opacity: 0.2,
-      widthMinPixels: 1.6,
+      widthMinPixels: 1.8,
       rounded: true,
       shadowEnabled: false,
       parameters: {
