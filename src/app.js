@@ -230,8 +230,8 @@ const loadData = (event) => {
           timestamps.push(moment.utc((uniqueTimestamps[i] * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm:ss')); //for displaying time stamps
         }
       }
-      maxTime = uniqueTimestamps[uniqueTimestamps.length - 1];
-      utsLength = uniqueTimestamps.length - 1;
+      maxTime = uniqueTimes[uniqueTimes.length - 1];
+      utsLength = uniqueTimes.length - 1;
       //4. round time stamps per individual to nearest multiple of sample interval
       //... interpolate missing data (based on time stamps that exist in data)
       //... calculate distance between subsequent non-interpolated locations (for graph)
@@ -359,14 +359,19 @@ class App extends Component {
   }
 
   startPlotting = () => {
-    if (playbackState === 0) {
-      this.setState({ playButton: 'stop' });
-      playbackState = 1;
-      this.drawTracks();
-    } else if (playbackState === 1) {
+    if (playbackState === 1) {
       playbackState = 0;
       cancelAnimationFrame(playback);
       this.setState({ playButton: 'play' });
+    } else {
+      if (playbackState === -1) {
+        t0 = 0;
+        t = 0;
+        cTime = 0;
+      }
+      this.setState({ playButton: 'stop' });
+      playbackState = 1;
+      this.drawTracks();
     }
   }
 
@@ -456,8 +461,13 @@ class App extends Component {
 
   rangeSlider = (sliderValue) => {
     if (playbackState === 1) {
-      playbackState = 0;
       cancelAnimationFrame(playback);
+    }
+    if (sliderValue[1] === utsLength) {
+      playbackState = -1;
+      this.setState({ playButton: 'replay' });
+    } else {
+      playbackState = 0;
       this.setState({ playButton: 'play' });
     }
     this.setState({ sliderValue });
@@ -508,7 +518,7 @@ class App extends Component {
           </StaticMap>
         </DeckGL>
         <div className='counter'>
-          <h2>{counterTime}</h2>
+          <h2 style={{color: 'black'}}>{counterTime}</h2>
         </div>
         <Graph {...this.state} />
         <div className='buttons'>
