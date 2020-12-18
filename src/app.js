@@ -3,14 +3,16 @@ import './app.css';
 import { hot } from 'react-hot-loader';
 import Papa from 'papaparse';
 import moment from 'moment';
+import simplify from 'simplify-js';
 import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
-import { StaticMap } from 'react-map-gl';
+import {BASEMAP} from '@deck.gl/carto'; //free Carto map - no access token required
+import StaticMap, { NavigationControl, ScaleControl } from 'react-map-gl';
 import { renderTracks } from './track.js';
 import Graph from './graph.js';
 import Slider from './slider.js';
 
 
-const INITIAL_MAP_VIEW = {
+let mapView = {
   longitude: 0,
   latitude: 0,
   zoom: 2,
@@ -55,6 +57,8 @@ let time0 = 0; //start time for calculating tailLength
 let displayTime = 0; //current time for display
 let sliderTime = [0, 0];
 let timeRange = [0, 0];
+let markFilter = [[0, 0], [0, 0]];
+let selectedID = -1; //for selecting a specific track and marker
 const tracks = [];
 const markers = [];
 
@@ -227,7 +231,7 @@ const loadData = (event) => {
         uniqueTimestamps[i] = Math.round((uniqueTimestamps[i] - minTimestamp) / sampleInterval);
         if (uniqueTimestamps[i] !== uniqueTimestamps[i - 1]) {
           uniqueTimes.push(uniqueTimestamps[i]);
-          timestamps.push(moment.utc((uniqueTimestamps[i] * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm:ss')); //for displaying time stamps
+          timestamps.push(moment.utc((uniqueTimestamps[i] * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm')); //for displaying time stamps
         }
       }
       maxTime = uniqueTimes[uniqueTimes.length - 1];
@@ -242,6 +246,7 @@ const loadData = (event) => {
         let tDiff = 0;
         let newCoords = [];
         let newDistance = 0;
+        let prevDistance = 0;
         let j = 0;
         let newJ = 0;
         while (j < datetimes[i].length) {
@@ -251,6 +256,7 @@ const loadData = (event) => {
           markers.push(marker);
           if (j !== 0) {
             //check if any missing data based on datetimes and interpolate
+            //interpolation seems required for tracks so they appear smooth in deckgl
             tDiff = newTime - prevTime;
             newJ = Number(j);
             if (tDiff > 1) {
@@ -268,27 +274,33 @@ const loadData = (event) => {
             } else {
               datetimes[i][j] = newTime;
             }
-            newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]);
-            maxDist = (newDistance > maxDist) ? newDistance : maxDist;
+            newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
+            // maxDist = (newDistance > maxDist) ? newDistance : maxDist;
             j = newJ + 1;
           } else {
             datetimes[i][j] = newTime;
             j = j + 1;
           }
           distance[i].push({x: newTime, y: newDistance});
+          prevDistance = Number(newDistance);
           prevTime = Number(newTime);
         }
         //create track data...
         let track = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i],timestamps:datetimes[i]};
         tracks.push(track);
         //create plot data...
-        let series = {key:i,data:[],color:rgbToHex(colour[i]),size:3};
-        if (datetimes[i][0] === 0) {
-          series.data = [distance[i][0]];
-        }
+        // let series = {key:i,data:[],color:rgbToHex(colour[i]),size:3};
+        // if (datetimes[i][0] === 0) {
+        //   series.data = [distance[i][0]];
+        // }
+        maxDist = (newDistance > maxDist) ? newDistance : maxDist;
+        //simplify plot data
+        let simplified = simplify(distance[i], 50, true);
+        let series = {key:i,data:simplified,color:rgbToHex(colour[i])};
         plotData.push(series);
       }
       displayTime = timestamps[0];
+      markFilter[1][1] = ids;
     }
   });
 }
@@ -297,14 +309,19 @@ const loadData = (event) => {
 class App extends Component {
 
   state = {
-    mapView: INITIAL_MAP_VIEW,
-    baseMap: 'mapbox://styles/mapbox/light-v9',
+    viewport: mapView,
+    // baseMap: 'http://localhost:3650/api/maps/basic/style.json',
+    baseMap: BASEMAP.POSITRON, //free Carto map - no access token required
+    animals: [],
     trackData: [],
     trackTrail: 0,
+    trackTime0: 0,
     trackTime: 0,
+    trackFilter: [0, 0],
+    trackVisible: true,
     markerData: [],
-    markerFilter: [0, 0],
-    markerVisible: true,
+    markerFilter: markFilter,
+    markerVisible: false,
     counterTime: '',
     sliderValue: [0, 0],
     sliderSteps: 10,
@@ -320,27 +337,24 @@ class App extends Component {
   };
 
   flyToData = () => {
-    let w = window.innerWidth;
-    let h = window.innerHeight;
-    const { longitude, latitude, zoom } = new WebMercatorViewport({ width: w, height: h }).fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: {top: 10, bottom: 200, left: 10, right: 10} });
-    const NEW_MAP_VIEW = {
+    const _viewport = new WebMercatorViewport(this.state.viewport);
+    const { longitude, latitude, zoom } = _viewport.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: {top: 10, bottom: 200, left: 10, right: 10} });
+    mapView = {
+      ...this.state.viewport,
       longitude,
       latitude,
       zoom,
-      bearing: 0,
-      pitch: 30,
-      transitionDuration: 1000,
+      transitionDuration: 2000,
       transitionInterpolator: new FlyToInterpolator()
     };
     this.setState({
-      mapView: NEW_MAP_VIEW,
+      viewport: mapView,
+      animals: animalID,
       trackData: tracks,
-      trackTrail: tailLength,
-      trackTime: cTime,
+      trackFilter: [0, ids],
       markerData: markers,
-      markerFilter: timeRange,
+      markerFilter: markFilter,
       counterTime: displayTime,
-      sliderValue: sliderTime,
       sliderSteps: utsLength,
       maxTimeVal: maxTime,
       graphData: plotData,
@@ -351,10 +365,10 @@ class App extends Component {
   }
 
   toggleMapStyle = () => {
-    if (this.state.baseMap === 'mapbox://styles/mapbox/light-v9') {
-      this.setState({ baseMap: 'mapbox://styles/mapbox/satellite-v9' });
+    if (this.state.baseMap === BASEMAP.POSITRON) {
+      this.setState({ baseMap: 'mapbox://styles/mapbox/satellite-v9?optimize=true' });
     } else {
-      this.setState({ baseMap: 'mapbox://styles/mapbox/light-v9' });
+      this.setState({ baseMap: BASEMAP.POSITRON });
     }
   }
 
@@ -376,7 +390,7 @@ class App extends Component {
   }
 
   playSpeed = () => {
-    if (speed === 16) {
+    if (speed === 32) {
       speed = 1;
     } else {
       speed = speed * 2;
@@ -402,11 +416,37 @@ class App extends Component {
     }
   }
 
+  trackVisibility = () => {
+    if (this.state.trackVisible === true) {
+      this.setState({ trackVisible: false });
+    } else {
+      this.setState({ trackVisible: true });
+    }
+  }
+
   graphVisibility = () => {
     if (this.state.graphVisible === 'visible') {
       this.setState({ graphVisible: 'hidden' });
     } else {
       this.setState({ graphVisible: 'visible' });
+    }
+  }
+
+  toggleAnimals = (e) => {
+    if (selectedID === Number(e.target.getAttribute('id'))) {
+      selectedID = -1;
+      markFilter[1] = [0, ids];
+      this.setState({
+        trackFilter: [0, ids],
+        markerFilter: markFilter
+      });
+    } else {
+      selectedID = Number(e.target.getAttribute('id'));
+      markFilter[1] = [selectedID, selectedID];
+      this.setState({
+        trackFilter: [selectedID, selectedID],
+        markerFilter: markFilter
+      });
     }
   }
 
@@ -430,25 +470,27 @@ class App extends Component {
         time0 = uniqueTimes[t0];
         tailLength = cTime - time0;
         timeRange = [time0, cTime];
+        markFilter[0] = timeRange;
         sliderTime = [t0, t];
         displayTime = timestamps[t];
-        for (let i = 0; i < ids; i++) {
-          let j = distance[i].findIndex(d => d.x === cTime); //skips interpolated time stamps
-          if (j >= 0) {
-            plotData[i].data = [distance[i][j]];
-            //for LineSeries plots use...
-            // plotData[i].data.push(distance[i][t]);
-          } else {
-            plotData[i].data = [];
-          }
-        }
+        // for (let i = 0; i < ids; i++) {
+        //   let j = distance[i].findIndex(d => d.x === cTime); //skips interpolated time stamps
+        //   if (j >= 0) {
+        //     plotData[i].data = [distance[i][j]];
+        //     //for LineSeries plots use...
+        //     // plotData[i].data.push(distance[i][t]);
+        //   } else {
+        //     plotData[i].data = [];
+        //   }
+        // }
         this.setState({
+          trackTime0: time0,
           trackTime: cTime,
           trackTrail: tailLength,
-          markerFilter: timeRange,
+          markerFilter: markFilter,
           counterTime: displayTime,
-          sliderValue: sliderTime,
-          graphData: plotData
+          sliderValue: sliderTime
+          // graphData: plotData
         });
       } else {
         playbackState = -1;
@@ -477,66 +519,82 @@ class App extends Component {
     cTime = uniqueTimes[t];
     tailLength = cTime - time0;
     timeRange = [time0, cTime];
+    markFilter[0] = timeRange;
     sliderTime = [t0, t];
     displayTime = timestamps[t];
-    for (let i = 0; i < ids; i++) {
-      let j = distance[i].findIndex(d => d.x === cTime); //skips interpolated time stamps
-      if (j >= 0) {
-        plotData[i].data = [distance[i][j]];
-        //for LineSeries plots use...
-        // plotData[i].data.push(distance[i][t]);
-      } else {
-        plotData[i].data = [];
-      }
-      // }
-    }
+    // for (let i = 0; i < ids; i++) {
+    //   let j = distance[i].findIndex(d => d.x === cTime); //skips interpolated time stamps
+    //   if (j >= 0) {
+    //     plotData[i].data = [distance[i][j]];
+    //     //for LineSeries plots use...
+    //     // plotData[i].data.push(distance[i][t]);
+    //   } else {
+    //     plotData[i].data = [];
+    //   }
+    // }
     this.setState({
+      trackTime0: time0,
       trackTime: cTime,
       trackTrail: tailLength,
-      markerFilter: timeRange,
-      counterTime: displayTime,
-      graphData: plotData
+      markerFilter: markFilter,
+      counterTime: displayTime
+      // graphData: plotData
     });
   }
 
 
   render() {
-    const {counterTime, sliderSteps, sliderValue, mapView, baseMap, playButton, playbackSpeed, playTypeButton} = this.state;
+    const {viewport, baseMap, animals, counterTime, playButton, playbackSpeed, playTypeButton, graphVisible} = this.state;
 
     return (
-      <div>
-        <DeckGL
-          layers={renderTracks({...this.state})}
-          getTooltip={({object}) => object && `${object.species}\n${object.animal}\n${moment.utc((object.timestamps * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm:ss')}`}
-          initialViewState={mapView}
-          controller={true}
+      <div className='content'>
+        <StaticMap
+          {...viewport}
+          width='100vw'
+          height='100vh'
+          mapboxApiAccessToken={MAPBOX_TOKEN}
+          mapStyle={baseMap}
+          onViewportChange={(viewport) => {this.setState({viewport})}}
         >
-          <StaticMap
-            mapboxApiAccessToken={MAPBOX_TOKEN}
-            mapStyle={baseMap}
-          >
-          </StaticMap>
-        </DeckGL>
+          <DeckGL
+            initialViewState={viewport}
+            layers={renderTracks({...this.state})}
+            getTooltip={({object}) => object && `${object.species}\n${object.animal}\n${moment.utc((object.timestamps * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm')}`}
+          />
+          <div className='zoomButton'>
+            <NavigationControl />
+          </div>
+          <div className='scaleBar'>
+            <ScaleControl />
+          </div>
+        </StaticMap>
         <div className='counter'>
-          <h2 style={{color: 'black'}}>{counterTime}</h2>
+          <h2>{counterTime}</h2>
         </div>
-        <Graph {...this.state} />
-        <div className='buttons'>
+        <div className='playbackOptions'>
           <input type='file' onChange={loadData} />
-          <button style={{width: '60px'}} onClick={this.flyToData}>fly</button>
-          <button style={{width: '60px'}} onClick={this.startPlotting}>{playButton}</button>
-          <button style={{width: '60px'}} onClick={this.playSpeed}>x{playbackSpeed}</button>
-          <button style={{width: '60px'}} onClick={this.playType}>{playTypeButton}</button>
-          <button style={{width: '60px'}} onClick={this.markerVisibility}>points</button>
-          <button style={{width: '60px'}} onClick={this.graphVisibility}>graph</button>
-          <button style={{width: '60px'}} onClick={this.toggleMapStyle}>map</button>
+          <button className='button' onClick={this.flyToData}>fly</button>
+          <button className='button' onClick={this.startPlotting}>{playButton}</button>
+          <button className='button' onClick={this.playSpeed}>x{playbackSpeed}</button>
+          <button className='button' onClick={this.playType}>{playTypeButton}</button>
         </div>
-        <Slider
-          max={sliderSteps}
-          values={sliderValue}
-          onChange={this.rangeSlider}
-        >
-        </Slider>
+        <div className='displayOptions'>
+          <button className='button' onClick={this.toggleMapStyle}>map</button>
+          <button className='button' onClick={this.graphVisibility}>graph</button>
+          <button className='button' onClick={this.markerVisibility}>points</button>
+          <button className='button' onClick={this.trackVisibility}>track</button>
+        </div>
+        <ul className='animalList'>
+          {animals.map((name, index) => (
+            <li className='animalListItem' key={index} id={index} onClick={this.toggleAnimals}>{name}</li>
+          ))}
+        </ul>
+        <div className='graph' style={{visibility: graphVisible}}>
+          <Graph {...this.state} />
+        </div>
+        <div className='rangeSlider'>
+          <Slider {...this.state} onChange={this.rangeSlider} />
+        </div>
       </div>
     );
   }
