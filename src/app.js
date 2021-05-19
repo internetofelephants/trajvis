@@ -6,8 +6,8 @@ import moment from 'moment';
 import simplify from 'simplify-js';
 import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
 import {BASEMAP} from '@deck.gl/carto'; //free Carto map - no access token required
-import StaticMap, { NavigationControl, ScaleControl } from 'react-map-gl';
-import { renderTracks } from './track.js';
+import { StaticMap, MapContext, NavigationControl, ScaleControl } from 'react-map-gl';
+import renderTracks from './track.js';
 import Graph from './graph.js';
 import Slider from './slider.js';
 
@@ -70,6 +70,19 @@ let interval = 1000/maxfps; //for drawTracks function
 let now = Date.now(); //for drawTracks function
 let then = Date.now(); //for drawTracks function
 let delta = now - then; //for drawTracks function
+
+//for video input and output variables and parameters
+let recorder, stream, videoURL;
+let recording = false;
+const displayMediaOptions = {
+  video: {
+    width: { ideal: 1920 },
+    height: { ideal: 1080 },
+    frameRate: { ideal: 60 }
+  },
+  audio: false
+};
+const mediaRecorderOptions = { mimeType : 'video/webm' };
 
 //convert rgb to hex (hex required for graph)
 const rgbToHex = (rgb) => '#' + rgb.map(x => {
@@ -333,12 +346,52 @@ class App extends Component {
     tsInterval: 0,
     playButton: 'play',
     playTypeButton: 'all',
-    playbackSpeed: speed
+    playbackSpeed: speed,
+    recordColour: '#000000'
   };
+
+  startRecording = async () => {
+    stream = await navigator.mediaDevices.getDisplayMedia(displayMediaOptions);
+    recorder = new MediaRecorder(stream, mediaRecorderOptions);
+    this.setState({ recordColour: '#FF0000' });
+    const chunks = [];
+    recorder.ondataavailable = e => chunks.push(e.data);
+    recorder.onstop = () => {
+      const completeBlob = new Blob(chunks, { type: chunks[0].type });
+      videoURL = URL.createObjectURL(completeBlob);
+      const videoLink = document.createElement('a');
+      videoLink.href = videoURL;
+      videoLink.download = 'trajVisRecording.mp4';
+      // videoLink.innerHTML = 'Download recording';
+      // let dlLink = document.getElementById('dlLink');
+      // dlLink.appendChild(videoLink);
+      videoLink.click(); //opens the "Save As" dialogue window
+    };
+
+    recorder.start();
+  }
+
+  recordScreen = () => {
+    if (recording != true) {
+      recording = true;
+      this.startRecording();
+    } else {
+      recording = false;
+      recorder.stop();
+      this.setState({ recordColour: '#000000' });
+      stream.getVideoTracks()[0].stop();
+      URL.revokeObjectURL(videoURL);
+      if (playbackState === 1) {
+        playbackState = 0;
+        cancelAnimationFrame(playback);
+        this.setState({ playButton: 'play' });
+      }
+    }
+  }
 
   flyToData = () => {
     const _viewport = new WebMercatorViewport(this.state.viewport);
-    const { longitude, latitude, zoom } = _viewport.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: {top: 10, bottom: 200, left: 10, right: 10} });
+    const { longitude, latitude, zoom } = _viewport.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: {top: -500, bottom: -100, left: -100, right: -100} });
     mapView = {
       ...this.state.viewport,
       longitude,
@@ -544,30 +597,32 @@ class App extends Component {
 
 
   render() {
-    const {viewport, baseMap, animals, counterTime, playButton, playbackSpeed, playTypeButton, graphVisible} = this.state;
+    const {viewport, baseMap, animals, counterTime, playButton, playbackSpeed, playTypeButton, graphVisible, recordColour} = this.state;
 
     return (
-      <div className='content'>
-        <StaticMap
-          {...viewport}
-          width='100vw'
-          height='100vh'
-          mapboxApiAccessToken={MAPBOX_TOKEN}
-          mapStyle={baseMap}
-          onViewportChange={(viewport) => {this.setState({viewport})}}
+      <div id='map'>
+        <DeckGL
+          initialViewState={viewport}
+          controller={true}
+          layers={renderTracks({...this.state})}
+          getTooltip={({object}) => object && `${object.species}\n${object.animal}\n${moment.utc((object.timestamps * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm')}`}
+          ContextProvider={MapContext.Provider}
+          parameters={{
+            depthTest: false
+          }}
         >
-          <DeckGL
-            initialViewState={viewport}
-            layers={renderTracks({...this.state})}
-            getTooltip={({object}) => object && `${object.species}\n${object.animal}\n${moment.utc((object.timestamps * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm')}`}
-          />
+          <StaticMap
+            mapboxApiAccessToken={MAPBOX_TOKEN}
+            mapStyle={baseMap}
+          >
+          </StaticMap>
           <div className='zoomButton'>
-            <NavigationControl />
+            <NavigationControl/>
           </div>
           <div className='scaleBar'>
-            <ScaleControl />
+            <ScaleControl/>
           </div>
-        </StaticMap>
+        </DeckGL>
         <div className='counter'>
           <h2>{counterTime}</h2>
         </div>
@@ -577,6 +632,7 @@ class App extends Component {
           <button className='button' onClick={this.startPlotting}>{playButton}</button>
           <button className='button' onClick={this.playSpeed}>x{playbackSpeed}</button>
           <button className='button' onClick={this.playType}>{playTypeButton}</button>
+          <button className='button' onClick={this.recordScreen} style={{color: recordColour}}>rec</button>
         </div>
         <div className='displayOptions'>
           <button className='button' onClick={this.toggleMapStyle}>map</button>
@@ -595,9 +651,11 @@ class App extends Component {
         <div className='rangeSlider'>
           <Slider {...this.state} onChange={this.rangeSlider} />
         </div>
+        {/*<div id='dlLink'></div>*/}
       </div>
     );
   }
 }
 
 export default hot(module)(App);
+// export default App;

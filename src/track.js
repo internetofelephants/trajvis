@@ -2,7 +2,7 @@ import { TripsLayer, ScatterplotLayer } from 'deck.gl';
 // import { BitmapLayer, TripsLayer, ScatterplotLayer } from 'deck.gl';
 import { DataFilterExtension } from '@deck.gl/extensions';
 
-export function renderTracks(props) {
+export default function renderTracks(props) {
   const {trackData, trackTrail, trackTime, trackFilter, trackVisible, markerData, markerFilter, markerVisible} = props;
   return [
     // new BitmapLayer({

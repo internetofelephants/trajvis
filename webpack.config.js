@@ -15,6 +15,15 @@ module.exports = {
       {
         test: /\.css$/,
         use: ['style-loader', 'css-loader']
+      },
+      {
+        test: /\.(png)$/i,
+        type: 'asset/inline'
+      },
+      {
+        test: /\.js$/,
+        enforce: 'pre',
+        use: 'source-map-loader'
       }
     ]
   },
