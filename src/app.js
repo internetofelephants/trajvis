@@ -42,7 +42,7 @@ const distance = [[]];
 let maxDist = 0; //for Y axis of graph
 let plotData = [];
 let minTimestamp = 0;
-const uniqueTimes = []; //unique time stamps rounded to nearest interval
+let uniqueTimes = []; //unique time stamps rounded to nearest interval
 const timestamps = []; //unique time stamps as strings for display
 let sampleInterval = 0;
 let maxTime = 0; //for X axis of graph (and range slider steps if using continuous time)
@@ -226,91 +226,191 @@ const loadData = (event) => {
           // }
         }
       }
-      timeDiff.sort(function(a, b) {
-        return a - b;
-      });
+      timeDiff.sort(function(a, b) { return a - b; });
       const timeDiffLength = timeDiff.length;
-      if (timeDiffLength % 2 === 0) { //is even
-        //average of two middle numbers
+      if (timeDiffLength % 2 === 0) { //is even, use average of two middle numbers
         sampleInterval = (timeDiff[timeDiffLength / 2 - 1] + timeDiff[timeDiffLength / 2]) / 2;
-      } else { //is odd
-        //middle number only
+      } else { //is odd, use middle number only
         sampleInterval = timeDiff[(timeDiffLength - 1) / 2];
       }
       //3. round unique time stamps to nearest multiple of sample interval and remove duplicates
       minTimestamp = uniqueTimestamps[0];
-      utsLength = uniqueTimestamps.length - 1;
-      for (let i = 0; i <= utsLength; i++) {
+      utsLength = uniqueTimestamps.length;
+      for (let i = 0; i < utsLength; i++) {
         uniqueTimestamps[i] = Math.round((uniqueTimestamps[i] - minTimestamp) / sampleInterval);
         if (uniqueTimestamps[i] !== uniqueTimestamps[i - 1]) {
           uniqueTimes.push(uniqueTimestamps[i]);
-          timestamps.push(moment.utc((uniqueTimestamps[i] * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm')); //for displaying time stamps
+          // timestamps.push(moment.utc((uniqueTimestamps[i] * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm')); //for displaying time stamps
         }
       }
-      maxTime = uniqueTimes[uniqueTimes.length - 1];
-      utsLength = uniqueTimes.length - 1;
-      //4. round time stamps per individual to nearest multiple of sample interval
-      //... interpolate missing data (based on time stamps that exist in data)
+      utsLength = uniqueTimes.length;
+      maxTime = uniqueTimes[utsLength - 1];
+
+      //4. find expected sequence and check if interpolation is necessary
+      //... method should work for continuous and non-continuous data
+      const islands = []; //chunks of continuous time stamps, given the sample interval
+      const gaps = []; //length of each gap between islands
+      let startTimes = []; //start time of each island
+      let _td = 1;
+      for (let i = 1; i < utsLength; i++) {
+        if(uniqueTimes[i] - uniqueTimes[i - 1] === 1){
+          _td++;
+        } else {
+          islands.push(_td);
+          _td = 1;
+          gaps.push((uniqueTimes[i] - uniqueTimes[i - 1]) - 1);
+          startTimes.push(uniqueTimes[i]);
+        }
+      }
+      //check if any missing values detected
+      const gapsLength = gaps.length;
+      if (gapsLength !== 0) {
+        //find median length of islands, gaps and start times (for non-continuous data)
+        const sTLength = startTimes.length;
+        for (let i = 0; i < sTLength; i++) { //remove dates, keep time in seconds
+          startTimes[i] = ((startTimes[i] * sampleInterval + minTimestamp) - Math.floor((startTimes[i] * sampleInterval + minTimestamp)/86400) * 86400) / sampleInterval;
+        }
+        islands.sort(function(a, b) { return a - b; });
+        gaps.sort(function(a, b) { return a - b; });
+        startTimes.sort(function(a, b) { return a - b; });
+        let island = 0;
+        let gap = 0;
+        let startTime = 0;
+        if (sTLength % 2 === 0) { //is even, use average of two middle numbers
+          island = (islands[sTLength / 2 - 1] + islands[sTLength / 2]) / 2;
+          gap = (gaps[sTLength / 2 - 1] + gaps[sTLength / 2]) / 2;
+          startTime = (startTimes[sTLength / 2 - 1] + startTimes[sTLength / 2]) / 2;
+        } else { //is odd, use middle number only
+          island = islands[(sTLength - 1) / 2];
+          gap = gaps[(sTLength - 1) / 2];
+          startTime = startTimes[(sTLength - 1) / 2];
+        }
+        //get expected times...
+        let expTimes = [];
+        if ((island + gap) * sampleInterval === 86400) {//based on island, gap and maxTime
+          let count = 0;
+          let mgap = 0;
+          let _val = 0;
+          while (_val < maxTime) {
+            for (let i = 0; i < island; i++) {
+              _val = count + (gap * mgap);
+              expTimes.push(_val);
+              count++;
+            }
+            mgap++;
+          }
+          //check if first time stamp is equal to expected start time (median start time)
+          const firstStartTime = (minTimestamp - Math.floor(minTimestamp/86400) * 86400) / sampleInterval;
+          if (firstStartTime != startTime) {
+            let newST = firstStartTime - startTime;
+            expTimes.slice(newST);
+            const newSTLength = newST.length;
+            for (let i = 0; i < newSTLength; i++) {
+              expTimes[i] = expTimes[i] - newST;
+            }
+          }
+        } else {//based only on maxTime
+          for (let i = 0; i < maxTime; i++) {
+            expTimes.push(i);
+          }
+        }
+        //update unique times
+        uniqueTimes = [...expTimes];
+        utsLength = uniqueTimes.length;
+      }
+
+      //create array of time stamps for displaying in counter
+      for (let i = 0; i < utsLength; i++) {
+        timestamps.push(moment.utc((uniqueTimes[i] * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm'));
+      }
+
+      //5. round time stamps per individual to nearest multiple of sample interval
+      //... interpolate missing time stamps if necessary (based expected time stamps)
       //... calculate distance between subsequent non-interpolated locations (for graph)
       //... push markers, tracks and graph data to objects
-      for (let i = 0; i < ids; i++) {
-        let newTime = 0;
-        let prevTime = 0;
-        let tDiff = 0;
-        let newCoords = [];
-        let newDistance = 0;
-        let prevDistance = 0;
-        let j = 0;
-        let newJ = 0;
-        while (j < datetimes[i].length) {
-          newTime = Math.round((datetimes[i][j] - minTimestamp) / sampleInterval);
-          //push markers with no interpolation
-          let marker = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i][j],timestamps:newTime};
-          markers.push(marker);
-          if (j !== 0) {
-            //check if any missing data based on datetimes and interpolate
-            //interpolation seems required for tracks so they appear smooth in deckgl
-            tDiff = newTime - prevTime;
-            newJ = Number(j);
-            if (tDiff > 1) {
-              for (let k = 1; k < tDiff; k++) {
-                let iTime = prevTime + k;
-                if (uniqueTimes.indexOf(iTime, newJ - 1) > 0) { //for non-continuous sampling
-                  datetimes[i].splice(newJ, 0, iTime);
-                  newCoords = interPoint(coords[i][newJ - 1][1], coords[i][newJ - 1][0], coords[i][newJ][1], coords[i][newJ][0], 1/(tDiff - (k - 1)));
-                  newCoords.push(coords[i][newJ - 1][2]); //add altitude data
-                  coords[i].splice(newJ, 0, newCoords);
-                  newJ = newJ + 1;
+      if (gapsLength === 0) {
+        for (let i = 0; i < ids; i++) {
+          let newTime = 0;
+          let newDistance = 0;
+          let prevDistance = 0;
+          let dtLength = datetimes[i].length;
+          for (let j = 0; j < dtLength; j++) {
+            newTime = Math.round((datetimes[i][j] - minTimestamp) / sampleInterval);
+            datetimes[i][j] = newTime;
+            //markers
+            let marker = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i][j],timestamps:newTime};
+            markers.push(marker);
+            //distance
+            if (j !== 0) {
+              newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
+            }
+            distance[i].push({x: newTime, y: newDistance});
+            prevDistance = Number(newDistance);
+          }
+          //tracks
+          let track = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i],timestamps:datetimes[i]};
+          tracks.push(track);
+          maxDist = (newDistance > maxDist) ? newDistance : maxDist;
+          //simplify plot data
+          let simplified = simplify(distance[i], 50, true);
+          let series = {key:i,data:simplified,color:rgbToHex(colour[i])};
+          plotData.push(series);
+        }
+      } else {
+        for (let i = 0; i < ids; i++) {
+          let newTime = 0;
+          let prevTime = 0;
+          let tDiff = 0;
+          let newCoords = [];
+          let newDistance = 0;
+          let prevDistance = 0;
+          let j = 0;
+          let newJ = 0;
+          while (j < datetimes[i].length) {
+            newTime = Math.round((datetimes[i][j] - minTimestamp) / sampleInterval);
+            //push markers with no interpolation
+            let marker = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i][j],timestamps:newTime};
+            markers.push(marker);
+            if (j !== 0) {
+              //check if any missing datetimes and interpolate (plus coordinates)
+              tDiff = newTime - prevTime;
+              newJ = Number(j);
+              if (tDiff > 1) {
+                for (let k = 1; k < tDiff; k++) {
+                  let iTime = prevTime + k;
+                  if (uniqueTimes.indexOf(iTime, newJ - 1) > 0) { //for non-continuous sampling
+                    datetimes[i].splice(newJ, 0, iTime);
+                    // newCoords = interPoint(coords[i][newJ - 1][1], coords[i][newJ - 1][0], coords[i][newJ][1], coords[i][newJ][0], 1/(tDiff - (k - 1))); //interpolate
+                    newCoords = [coords[i][newJ - 1][0], coords[i][newJ - 1][1]]; //repeat previous
+                    newCoords.push(coords[i][newJ - 1][2]); //add altitude data
+                    coords[i].splice(newJ, 0, newCoords);
+                    newJ = newJ + 1;
+                  }
                 }
+                datetimes[i][newJ] = newTime;
+              } else {
+                datetimes[i][j] = newTime;
               }
-              datetimes[i][newJ] = newTime;
+              newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
+              // maxDist = (newDistance > maxDist) ? newDistance : maxDist;
+              j = newJ + 1;
             } else {
               datetimes[i][j] = newTime;
+              j = j + 1;
             }
-            newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
-            // maxDist = (newDistance > maxDist) ? newDistance : maxDist;
-            j = newJ + 1;
-          } else {
-            datetimes[i][j] = newTime;
-            j = j + 1;
+            distance[i].push({x: newTime, y: newDistance});
+            prevDistance = Number(newDistance);
+            prevTime = Number(newTime);
           }
-          distance[i].push({x: newTime, y: newDistance});
-          prevDistance = Number(newDistance);
-          prevTime = Number(newTime);
+          //create track data...
+          let track = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i],timestamps:datetimes[i]};
+          tracks.push(track);
+          maxDist = (newDistance > maxDist) ? newDistance : maxDist;
+          //simplify plot data
+          let simplified = simplify(distance[i], 50, true);
+          let series = {key:i,data:simplified,color:rgbToHex(colour[i])};
+          plotData.push(series);
         }
-        //create track data...
-        let track = {id:i,species:species[i],animal:animalID[i],colour:colour[i],coordinates:coords[i],timestamps:datetimes[i]};
-        tracks.push(track);
-        //create plot data...
-        // let series = {key:i,data:[],color:rgbToHex(colour[i]),size:3};
-        // if (datetimes[i][0] === 0) {
-        //   series.data = [distance[i][0]];
-        // }
-        maxDist = (newDistance > maxDist) ? newDistance : maxDist;
-        //simplify plot data
-        let simplified = simplify(distance[i], 50, true);
-        let series = {key:i,data:simplified,color:rgbToHex(colour[i])};
-        plotData.push(series);
       }
       displayTime = timestamps[0];
       markFilter[1][1] = ids;
@@ -408,7 +508,7 @@ class App extends Component {
       markerData: markers,
       markerFilter: markFilter,
       counterTime: displayTime,
-      sliderSteps: utsLength,
+      sliderSteps: utsLength - 1,
       maxTimeVal: maxTime,
       graphData: plotData,
       graphMaxY: maxDist,
@@ -558,7 +658,7 @@ class App extends Component {
     if (playbackState === 1) {
       cancelAnimationFrame(playback);
     }
-    if (sliderValue[1] === utsLength) {
+    if (sliderValue[1] === utsLength - 1) {
       playbackState = -1;
       this.setState({ playButton: 'replay' });
     } else {
