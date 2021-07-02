@@ -18,12 +18,8 @@ module.exports = {
         options: { presets: ['@babel/env'] }
       },
       {
-        test: /\.css$/,
-        use: ['style-loader', 'css-loader']
-      },
-      {
-        test: /\.(png)$/i,
-        type: 'asset/inline'
+        test: /\.css$/i,
+        use: ['style-loader', 'css-loader', 'postcss-loader']
       },
       {
         test: /\.js$/,

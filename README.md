@@ -1,2 +1,2 @@
 # trajVis
-Visualise and animate animal movement data on interactive maps
+Visualise, animate and create videos of animal movement data on an interactive map
