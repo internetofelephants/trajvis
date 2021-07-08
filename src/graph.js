@@ -1,9 +1,8 @@
 import React from 'react';
 import '../node_modules/react-vis/dist/style.css';
-import { FlexibleWidthXYPlot, XAxis, YAxis, HorizontalGridLines, LineSeriesCanvas } from 'react-vis';
-import moment from 'moment';
+import { FlexibleWidthXYPlot, XAxis, YAxis, HorizontalGridLines, LineSeries } from 'react-vis';
 
-export default function Graph( {graphTitle, graphData, graphSeriesOpacity, maxTimeVal, graphMaxY, minTS, tsInterval, tsRange} ) {
+export default function Graph( {graphTitle, graphData, graphSeriesOpacity, maxTimeVal, graphMaxY, tsRange} ) {
   return (
     <div style={{width: '96%', height: '120px'}}>
       <div className='gTitleContainer'>
@@ -32,19 +31,19 @@ export default function Graph( {graphTitle, graphData, graphSeriesOpacity, maxTi
           tickSizeOuter={0}
         />
         {graphData.map((props, i) => (
-          <LineSeriesCanvas
+          <LineSeries
             {...props}
             opacity={graphSeriesOpacity[i]}
             strokeWidth={1.8}
           />
         ))}
-        <LineSeriesCanvas
+        <LineSeries
           data={[{x:tsRange[0], y:0}, {x:tsRange[0], y:graphMaxY}]}
           color={'#FFFFFF'}
           opacity={0.6}
           strokeWidth={3}
         />
-        <LineSeriesCanvas
+        <LineSeries
           data={[{x:tsRange[1], y:0}, {x:tsRange[1], y:graphMaxY}]}
           color={'#FFFFFF'}
           opacity={0.6}
