@@ -1,7 +1,7 @@
 {
   "name": "trajvis",
   "version": "1.0.0",
-  "description": "",
+  "description": "Visualise animal movement data",
   "main": "index.js",
   "scripts": {
     "start": "webpack serve --mode development",
@@ -9,12 +9,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/raffmares/trajVis.git"
+    "url": "https://github.com/internetofelephants/trajVis.git"
   },
   "author": {
     "name": "Raff Mares"
   },
-  "license": "ISC",
+  "license": "BSD-3-Clause",
   "devDependencies": {
     "@babel/cli": "^7.13.16",
     "@babel/core": "^7.14.0",
