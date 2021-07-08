@@ -495,8 +495,6 @@ class App extends Component {
     graphData: [],
     graphSeriesOpacity: [],
     graphMaxY: 0,
-    minTS: 0,
-    tsInterval: 0,
     playButton: 'play',
     playTypeButton: 'winOff',
     playbackSpeed: speed,
@@ -524,7 +522,7 @@ class App extends Component {
 
   flyToData = () => {
     const _viewport = new WebMercatorViewport(this.state.viewport);
-    const { longitude, latitude, zoom } = _viewport.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: {top: -450, bottom: -150, left: -700, right: -700} });
+    const { longitude, latitude, zoom } = _viewport.fitBounds([[minLon, minLat], [maxLon, maxLat]], { padding: {top: -390, bottom: -210, left: -700, right: -700} });
     mapView = {
       ...this.state.viewport,
       longitude,
@@ -549,8 +547,6 @@ class App extends Component {
       graphData: plotData,
       graphMaxY: maxDist,
       graphSeriesOpacity: seriesOpacity,
-      minTS: minTimestamp,
-      tsInterval: sampleInterval,
       fileInputDisplay: 'none',
       controlsDisplay: 'flex'
     });
@@ -869,6 +865,21 @@ class App extends Component {
             <ScaleControl/>
           </div>
         </DeckGL>
+        <div className='centerDiv' style={{display: fileInputDisplay}}>
+          <div className='welcomeBox'>
+            <p>trajVis: Visualise, animate and create videos of animal movement data on an interactive map.</p>
+            <p>To begin, select a csv file containing movement data for a single or multiple individuals.</p>
+            <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
+            <div className='fileInput'>
+              <label className='customFileInput'>
+                <input id='defaultFileInput' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
+              </label>
+            <div className='ioeLogoBig'>
+              <a href='https://www.internetofelephants.com/' target='_blank'></a>
+            </div>
+            </div>
+          </div>
+        </div>
         <div className='counter'>
           <h2>{counterTime}</h2>
         </div>
@@ -882,25 +893,8 @@ class App extends Component {
           <button title='graph' id={graphButton} className='button' onClick={this.graphVisibility}></button>
           <button title='map styles' id='mapIcon' className='button' onClick={this.toggleMapStyle}></button>
         </div>
-        <div className='centerDiv' style={{display: fileInputDisplay}}>
-          <div className='welcomeBox'>
-            <p>trajVis: Visualise, animate and create videos of animal movement data on an interactive map.</p>
-            <p>To begin, select a csv file containing movement data for a single or multiple individuals.</p>
-            <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
-            <div className='fileInput'>
-              <label className='customFileInput'>
-                <input id='defaultFileInput' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
-              </label>
-            </div>
-          </div>
-        </div>
-        <ul className='animalList'>
-          {animals.map((name, index) => (
-            <li className='animalListItem' key={index} id={index} onClick={this.toggleAnimals} style={{background: animalListBGCol[index], color: animalListCol[index]}}>{name}</li>
-          ))}
-        </ul>
-        <div className='graph' style={{visibility: graphVisible}}>
-          <Graph {...this.state} />
+        <div className='ioeLogoSmall' style={{display: controlsDisplay}}>
+          <a href='https://www.internetofelephants.com/' target='_blank'></a>
         </div>
         <div className='timeControls' style={{display: controlsDisplay}}>
           <div className='rsDates'>
@@ -910,6 +904,14 @@ class App extends Component {
           </div>
           <Slider {...this.state} onChange={this.rangeSlider} />
         </div>
+        <div className='graph' style={{visibility: graphVisible}}>
+          <Graph {...this.state} />
+        </div>
+        <ul className='animalList'>
+          {animals.map((name, index) => (
+            <li className='animalListItem' key={index} id={index} onClick={this.toggleAnimals} style={{background: animalListBGCol[index], color: animalListCol[index]}}>{name}</li>
+          ))}
+        </ul>
       </div>
     );
   }
