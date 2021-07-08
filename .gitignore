@@ -1,3 +1,9 @@
 node_modules
-dist
 assets
+public
+src
+.babelrc
+package-lock.json
+package.json
+postcss.config.js
+webpack.config.js
