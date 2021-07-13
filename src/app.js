@@ -485,6 +485,8 @@ class App extends Component {
     markerVisible: true,
     changeProps: false,
     counterTime: '',
+    counterColour: 'rgb(0, 0, 0)',
+    counterShadow: '0 0 20px rgb(255, 255, 255)',
     sliderDates: [],
     sliderValue: [0, 0, 0],
     sliderSteps: 10,
@@ -632,6 +634,8 @@ class App extends Component {
     if (this.state.baseMap === BASEMAP.POSITRON) {
       this.setState({
         baseMap: BASEMAP.DARK_MATTER,
+        counterColour: 'rgb(255, 255, 255)',
+        counterShadow: '0 0 20px rgb(0, 0, 0)'
       });
     } else if (this.state.baseMap === BASEMAP.DARK_MATTER) {
       this.setState({
@@ -642,6 +646,8 @@ class App extends Component {
     } else {
       this.setState({
         baseMap: BASEMAP.POSITRON,
+        counterColour: 'rgb(0, 0, 0)',
+        counterShadow: '0 0 20px rgb(255, 255, 255)',
         trackOpacity: 0.26,
         markerOpacity: 0.16
       });
@@ -843,7 +849,7 @@ class App extends Component {
   }
 
   render() {
-    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay} = this.state;
+    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, counterColour, counterShadow, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay} = this.state;
 
     return (
       <div id='map'>
@@ -884,7 +890,7 @@ class App extends Component {
             </div>
           </div>
         </div>
-        <div className='counter'>
+        <div className='counter' style={{color: counterColour, textShadow: counterShadow}}>
           <p>{counterTime}</p>
         </div>
         <div className='playbackOptions' style={{display: controlsDisplay}}>
