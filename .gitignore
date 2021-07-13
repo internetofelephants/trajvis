@@ -3,6 +3,7 @@ assets
 public
 src
 .babelrc
+.env
 package-lock.json
 package.json
 postcss.config.js
