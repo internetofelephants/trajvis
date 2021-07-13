@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import './css/app.css';
 import { hot } from 'react-hot-loader';
 import Papa from 'papaparse';
-import moment from 'moment';
+import dayjs from 'dayjs';
 import simplify from 'simplify-js';
 import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
 import { BASEMAP } from '@deck.gl/carto'; //free Carto map - no access token required
@@ -188,6 +188,8 @@ const loadData = (e) => {
       let x = 0; //index of animal - corresponds to value in animal_id column in csv file
       let y = 0; //index within each animal feature
       let z = 0; //index for each line within csv file
+      let _datetime = 0;
+      let _time = 0;
       const _timestamps = []; //all time stamps as numbers
       const getAltitude = (z) => {
         if (altitude === 'undefined') {
@@ -216,8 +218,10 @@ const loadData = (e) => {
           maxLon = (lon > maxLon) ? lon : maxLon;
           minLat = (lat < minLat) ? lat : minLat;
           maxLat = (lat > maxLat) ? lat : maxLat;
-          datetimes[x].push(moment.utc(data.data[z].timestamp.substring(0, 19), 'YYYY-MM-DD HH:mm:ss').unix()); //time stamps per individual
-          _timestamps.push(moment.utc(data.data[z].timestamp.substring(0, 19), 'YYYY-MM-DD HH:mm:ss').unix()); //all time stamps
+          _datetime = new Date(data.data[z].timestamp.substring(0, 19));
+          _time = _datetime.getTime() / 1000; //unix time (seconds)
+          datetimes[x].push(_time); //time stamps per individual
+          _timestamps.push(_time); //all time stamps
         }
         y++;
         //end of data or next individual
@@ -367,7 +371,7 @@ const loadData = (e) => {
 
       //create array of time stamps for displaying in counter
       for (let i = 0; i <= utsLength; i++) {
-        timestamps.push(moment.utc((uniqueTimes[i] * sampleInterval + minTimestamp) * 1000).format('YYYY MMM DD HH:mm'));
+        timestamps.push(dayjs.unix(uniqueTimes[i] * sampleInterval + minTimestamp).format('YYYY MMM DD HH:mm'));
       }
       //get dates to display above range slider
       let nTicks = rsTicks.length - 1;
@@ -857,7 +861,7 @@ class App extends Component {
           initialViewState={viewport}
           controller={true}
           layers={renderLayers({...this.state})}
-          getTooltip={({object}) => object && `species: ${object.species}\n tag: ${object.animal}\n ts: ${moment.utc((object.timestamps * sampleInterval + minTimestamp) * 1000).format('YYYY-MM-DD HH:mm')}\n altitude: ${object.coordinates[2]}`}
+          getTooltip={({object}) => object && `species: ${object.species}\n tag: ${object.animal}\n ts: ${dayjs.unix(object.timestamps * sampleInterval + minTimestamp).format('YYYY-MM-DD HH:mm')}\n altitude: ${object.coordinates[2]}`}
           ContextProvider={MapContext.Provider}
           parameters={{
             depthTest: false
