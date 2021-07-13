@@ -5,12 +5,14 @@ import Papa from 'papaparse';
 import moment from 'moment';
 import simplify from 'simplify-js';
 import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
-import {BASEMAP} from '@deck.gl/carto'; //free Carto map - no access token required
+import { BASEMAP } from '@deck.gl/carto'; //free Carto map - no access token required
 import { StaticMap, MapContext, NavigationControl, ScaleControl } from 'react-map-gl';
 import renderLayers from './layers.js';
 import Graph from './graph.js';
 import Slider from './slider.js';
 
+
+const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN;
 
 let mapView = {
   longitude: 0,
@@ -20,8 +22,6 @@ let mapView = {
   pitch: 15,
   maxPitch: 85
 };
-
-const MAPBOX_TOKEN = 'pk.eyJ1IjoicmFmZm1hcmVzIiwiYSI6ImNqOGYwdXd6YTE0ZnczMm1uMTF0NzZnbDYifQ.apQdLo_KQAc1jDQIKKTDHQ';
 
 //colours for tracks and markers (length should be >= number of species/individuals)
 const PALETTE = [[255, 0, 41], [102, 166, 30], [152, 78, 163], [0, 210, 213], [255, 127, 0], [175, 141, 0], [55, 126, 184], [127, 128, 205], [179, 233, 0], [196, 46, 96], [166, 86, 40], [247, 129, 191], [255, 0, 41], [102, 166, 30], [152, 78, 163], [0, 210, 213], [255, 127, 0], [175, 141, 0], [55, 126, 184], [127, 128, 205], [179, 233, 0], [196, 46, 96], [166, 86, 40], [247, 129, 191]];
@@ -631,6 +631,10 @@ class App extends Component {
   toggleMapStyle = () => {
     if (this.state.baseMap === BASEMAP.POSITRON) {
       this.setState({
+        baseMap: BASEMAP.DARK_MATTER,
+      });
+    } else if (this.state.baseMap === BASEMAP.DARK_MATTER) {
+      this.setState({
         baseMap: 'mapbox://styles/mapbox/satellite-v9?optimize=true',
         trackOpacity: 0.9,
         markerOpacity: 0.3
@@ -881,7 +885,7 @@ class App extends Component {
           </div>
         </div>
         <div className='counter'>
-          <h2>{counterTime}</h2>
+          <p>{counterTime}</p>
         </div>
         <div className='playbackOptions' style={{display: controlsDisplay}}>
           <button title='play/pause/replay' id={playButton} className='button' onClick={this.startPlotting}></button>
