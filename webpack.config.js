@@ -1,6 +1,9 @@
 const path = require('path');
 const webpack = require('webpack');
 const TerserPlugin = require('terser-webpack-plugin');
+const dotenv = require('dotenv').config( {
+  path: path.join(__dirname, '.env')
+} );
 
 module.exports = {
   entry: './src/index.js',
@@ -40,5 +43,8 @@ module.exports = {
     publicPath: 'http://localhost:3000/dist/',
     hotOnly: true
   },
-  plugins: [new webpack.HotModuleReplacementPlugin()]
+  plugins: [
+    new webpack.DefinePlugin( { 'process.env': JSON.stringify(process.env) } ),
+    new webpack.HotModuleReplacementPlugin()
+  ]
 };
