@@ -169,306 +169,6 @@ const createTrack = (i, newDistance) => {
   return maxDist = (newDistance > maxDist) ? newDistance : maxDist;
 }
 
-//open "file browswer window"...
-//and load data from selected csv file for tracks and graph
-const loadData = (e) => {
-  fileName = e.target.files[0];
-  Papa.parse(fileName, {
-    download: false,
-    delimeter: ',',
-    header: true,
-    skipEmptyLines: true,
-    dynamicTyping: true,
-    complete: function(data) {
-      //extract full coordinate and time stamp lists and add to corresponding variables
-      const dataLength = data.data.length;
-      let lon = 0;
-      let lat = 0;
-      const altitude = typeof(data.data[0].alt);
-      let x = 0; //index of animal - corresponds to value in animal_id column in csv file
-      let y = 0; //index within each animal feature
-      let z = 0; //index for each line within csv file
-      let _datetime = 0;
-      let _time = 0;
-      const _timestamps = []; //all time stamps as numbers
-      const getAltitude = (z) => {
-        if (altitude === 'undefined') {
-          return 0;
-        } else {
-          let alt = Math.round(data.data[z].alt);
-          if (Number.isFinite(alt)) {
-            return alt;
-          } else {
-            return -1;
-          }
-        }
-      }
-      //for bounding box and zooming into data
-      minLon = data.data[0].lon;
-      maxLon = data.data[0].lon;
-      minLat = data.data[0].lat;
-      maxLat = data.data[0].lat;
-      //loop through data
-      while (z < dataLength) {
-        lon = data.data[z].lon;
-        lat = data.data[z].lat;
-        if (Number.isFinite(lon) && Number.isFinite(lat)) {
-          coords[x].push([Math.round(lon * 1000000) / 1000000, Math.round(lat * 1000000) / 1000000, getAltitude(z)]);
-          minLon = (lon < minLon) ? lon : minLon;
-          maxLon = (lon > maxLon) ? lon : maxLon;
-          minLat = (lat < minLat) ? lat : minLat;
-          maxLat = (lat > maxLat) ? lat : maxLat;
-          _datetime = new Date(data.data[z].timestamp.substring(0, 19));
-          _time = _datetime.getTime() / 1000; //unix time (seconds)
-          datetimes[x].push(_time); //time stamps per individual
-          _timestamps.push(_time); //all time stamps
-        }
-        y++;
-        //end of data or next individual
-        if (z + 1 === dataLength) {
-          species.push(data.data[z].species);
-          animalID.push(data.data[z].animal_id);
-          break;
-        } else if (data.data[z].animal_id !== data.data[z + 1].animal_id) {
-          species.push(data.data[z].species);
-          animalID.push(data.data[z].animal_id);
-          x = x + 1;
-          coords.push([]);
-          datetimes.push([]);
-          distance.push([]);
-          y = 0;
-        }
-        z++;
-      }
-      //number of individuals: for number of tracks, and drawTracks and timeSlider functions
-      ids = animalID.length;
-      //define the track colour for each species or individual if only 1 species
-      const uniqueSpecies = [...new Set(species)];
-      const uniqueSpeciesCount = uniqueSpecies.length
-      if (colour[0] === undefined) {
-        x = 0;
-        y = 0;
-        while (x < ids) {
-          colour.push(PALETTE[y]);
-          x++;
-          if (uniqueSpeciesCount === 1 || species[x] !== species[x - 1]) {
-            y = y + 1;
-          }
-        }
-      }
-      //normalise time stamps...
-      //1. remove duplicated time stamps and sort min to max
-      const uniqueTimestamps = [...new Set(_timestamps)];
-      uniqueTimestamps.sort(function(a, b) {
-        return a - b;
-      });
-      //2. find sampling interval
-      //based on median of difference (in seconds) between consecutive locations
-      const timeDiff = [];
-      let j = 0;
-      const maxIndex = uniqueTimestamps.length - 1;
-      for (let i = 0; i < maxIndex; i++) {
-        let _timeDiff = uniqueTimestamps[i + 1] - uniqueTimestamps[j];
-        //if difference > 59 secs and < 3 hrs, add to timediff variable (for locations recorded in bursts and when there are on/off times)
-        if (_timeDiff > 59) {
-          j = i + 1;
-          // if (_timeDiff <= (3 * 3600)) {
-            timeDiff.push(_timeDiff);
-          // }
-        }
-      }
-      timeDiff.sort(function(a, b) { return a - b; });
-      const timeDiffLength = timeDiff.length;
-      if (timeDiffLength % 2 === 0) { //is even, use average of two middle numbers
-        sampleInterval = (timeDiff[timeDiffLength / 2 - 1] + timeDiff[timeDiffLength / 2]) / 2;
-      } else { //is odd, use middle number only
-        sampleInterval = timeDiff[(timeDiffLength - 1) / 2];
-      }
-      //3. round unique time stamps to nearest multiple of sample interval and remove duplicates
-      minTimestamp = uniqueTimestamps[0];
-      utsLength = uniqueTimestamps.length - 1;
-      for (let i = 0; i <= utsLength; i++) {
-        uniqueTimestamps[i] = Math.round((uniqueTimestamps[i] - minTimestamp) / sampleInterval);
-        if (uniqueTimestamps[i] !== uniqueTimestamps[i - 1]) {
-          uniqueTimes.push(uniqueTimestamps[i]);
-        }
-      }
-      utsLength = uniqueTimes.length - 1;
-      maxTime = uniqueTimes[utsLength];
-
-      //4. find expected sequence and check if interpolation is necessary
-      //... method should work for continuous and non-continuous data
-      const islands = []; //chunks of continuous time stamps, given the sample interval
-      const gaps = []; //length of each gap between islands
-      let startTimes = []; //start time of each island
-      let _td = 1;
-      for (let i = 1; i <= utsLength; i++) {
-        if(uniqueTimes[i] - uniqueTimes[i - 1] === 1){
-          _td++;
-        } else {
-          islands.push(_td);
-          _td = 1;
-          gaps.push((uniqueTimes[i] - uniqueTimes[i - 1]) - 1);
-          startTimes.push(uniqueTimes[i]);
-        }
-      }
-      //check if any missing values detected
-      const gapsLength = gaps.length;
-      if (gapsLength !== 0) {
-        //find median length of islands, gaps and start times (for non-continuous data)
-        const sTLength = startTimes.length;
-        for (let i = 0; i < sTLength; i++) { //remove dates, keep time in seconds
-          startTimes[i] = ((startTimes[i] * sampleInterval + minTimestamp) - Math.floor((startTimes[i] * sampleInterval + minTimestamp)/86400) * 86400) / sampleInterval;
-        }
-        islands.sort(function(a, b) { return a - b; });
-        gaps.sort(function(a, b) { return a - b; });
-        startTimes.sort(function(a, b) { return a - b; });
-        let island = 0;
-        let gap = 0;
-        let startTime = 0;
-        if (sTLength % 2 === 0) { //is even, use average of two middle numbers
-          island = (islands[sTLength / 2 - 1] + islands[sTLength / 2]) / 2;
-          gap = (gaps[sTLength / 2 - 1] + gaps[sTLength / 2]) / 2;
-          startTime = (startTimes[sTLength / 2 - 1] + startTimes[sTLength / 2]) / 2;
-        } else { //is odd, use middle number only
-          island = islands[(sTLength - 1) / 2];
-          gap = gaps[(sTLength - 1) / 2];
-          startTime = startTimes[(sTLength - 1) / 2];
-        }
-        //get expected times...
-        let expTimes = [];
-        if ((island + gap) * sampleInterval === 86400) {//based on island, gap and maxTime
-          let count = 0;
-          let mgap = 0;
-          let _val = 0;
-          while (_val < maxTime) {
-            for (let i = 0; i < island; i++) {
-              _val = count + (gap * mgap);
-              expTimes.push(_val);
-              count++;
-            }
-            mgap++;
-          }
-          //check if first time stamp is equal to expected start time (median start time)
-          const firstStartTime = (minTimestamp - Math.floor(minTimestamp/86400) * 86400) / sampleInterval;
-          if (firstStartTime != startTime) {
-            let newST = firstStartTime - startTime;
-            expTimes.slice(newST);
-            const newSTLength = newST.length;
-            for (let i = 0; i < newSTLength; i++) {
-              expTimes[i] = expTimes[i] - newST;
-            }
-          }
-        } else {//based only on maxTime
-          for (let i = 0; i < maxTime; i++) {
-            expTimes.push(i);
-          }
-        }
-        //update unique times
-        uniqueTimes = [...expTimes];
-        utsLength = uniqueTimes.length - 1;
-      }
-
-      //create array of time stamps for displaying in counter
-      for (let i = 0; i <= utsLength; i++) {
-        timestamps.push(dayjs.unix(uniqueTimes[i] * sampleInterval + minTimestamp).format('YYYY MMM DD HH:mm'));
-      }
-      //get dates to display above range slider
-      let nTicks = rsTicks.length - 1;
-      let maxTimeSec = maxTime * sampleInterval;
-      for (let i = 0; i <= nTicks; i++) {
-        let j = Math.round(rsTicks[i] * utsLength);
-        if (maxTimeSec <= 86400) {
-          useDates.push(timestamps[j].slice(12));
-        } else if (maxTimeSec <= 31536000) {
-          useDates.push(timestamps[j].slice(5, 12));
-        } else {
-          useDates.push("'" + timestamps[j].slice(2, 9));
-        }
-      }
-
-      //5. round time stamps per individual to nearest multiple of sample interval
-      //... interpolate missing time stamps if necessary (based expected time stamps)
-      //... calculate distance between subsequent non-interpolated locations (for graph)
-      //... push markers, tracks and graph data to objects
-      if (gapsLength === 0) {
-        for (let i = 0; i < ids; i++) {
-          let newTime = 0;
-          let newDistance = 0;
-          let prevDistance = 0;
-          let dtLength = datetimes[i].length;
-          for (let j = 0; j < dtLength; j++) {
-            //push markers and return newTime
-            newTime = createMarker(newTime, i, j);
-            datetimes[i][j] = newTime;
-            //distance
-            if (j !== 0) {
-              newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
-            }
-            distance[i].push({x: newTime, y: newDistance});
-            prevDistance = Number(newDistance);
-          }
-          //push tracks and graph data, and return max distance for graph
-          maxDist = createTrack(i, newDistance);
-        }
-      } else {
-        for (let i = 0; i < ids; i++) {
-          let newTime = 0;
-          let prevTime = 0;
-          let tDiff = 0;
-          let newCoords = [];
-          let newDistance = 0;
-          let prevDistance = 0;
-          let j = 0;
-          let newJ = 0;
-          while (j < datetimes[i].length) {
-            //push markers and return newTime
-            newTime = createMarker(newTime, i, j);
-            if (j !== 0) {
-              //check if any missing datetimes and interpolate (plus coordinates)
-              tDiff = newTime - prevTime;
-              newJ = Number(j);
-              if (tDiff > 1) {
-                for (let k = 1; k < tDiff; k++) {
-                  let iTime = prevTime + k;
-                  if (uniqueTimes.indexOf(iTime, newJ - 1) > 0) { //for non-continuous sampling
-                    datetimes[i].splice(newJ, 0, iTime);
-                    // newCoords = interPoint(coords[i][newJ - 1][1], coords[i][newJ - 1][0], coords[i][newJ][1], coords[i][newJ][0], 1/(tDiff - (k - 1))); //interpolate
-                    newCoords = [coords[i][newJ - 1][0], coords[i][newJ - 1][1]]; //repeat previous
-                    newCoords.push(coords[i][newJ - 1][2]); //add altitude data
-                    coords[i].splice(newJ, 0, newCoords);
-                    newJ = newJ + 1;
-                  }
-                }
-                datetimes[i][newJ] = newTime;
-              } else {
-                datetimes[i][j] = newTime;
-              }
-              newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
-              j = newJ + 1;
-            } else {
-              datetimes[i][j] = newTime;
-              j = j + 1;
-            }
-            distance[i].push({x: newTime, y: newDistance});
-            prevDistance = Number(newDistance);
-            prevTime = Number(newTime);
-          }
-          //push tracks and graph data, and return max distance for graph
-          maxDist = createTrack(i, newDistance);
-        }
-      }
-      //order markers by timestamp instead of id for nicer look when plotted
-      markers.sort((a, b) => a.timestamps - b.timestamps);
-      markersLength = markers.length;
-      displayTime = [timestamps[0], timestamps[0]];
-      useColourHex.push(...colourHex);
-      useFontColour.push(...fontColour);
-      dataLoaded = true;
-    }
-  });
-}
-
 
 class App extends Component {
 
@@ -491,6 +191,10 @@ class App extends Component {
     counterTime: '',
     counterColour: 'rgb(0, 0, 0)',
     counterShadow: '0 0 20px rgb(255, 255, 255)',
+    progDisplay: 'none',
+    progFileName: '',
+    progAnimation: 'infinite',
+    progDots: [0, 1, 2],
     sliderDates: [],
     sliderValue: [0, 0, 0],
     sliderSteps: 10,
@@ -513,15 +217,322 @@ class App extends Component {
     controlsDisplay: 'none'
   };
 
+  //open "file browswer window"...
+  //and load data from selected csv file for tracks and graph
+  loadData = (e) => {
+    fileName = e.target.files[0];
+    Papa.parse(fileName, {
+      download: false,
+      delimeter: ',',
+      header: true,
+      skipEmptyLines: true,
+      dynamicTyping: true,
+      complete: function(data) {
+        //extract full coordinate and time stamp lists and add to corresponding variables
+        const dataLength = data.data.length;
+        let lon = 0;
+        let lat = 0;
+        const altitude = typeof(data.data[0].alt);
+        let x = 0; //index of animal - corresponds to value in animal_id column in csv file
+        let y = 0; //index within each animal feature
+        let z = 0; //index for each line within csv file
+        let _datetime = 0;
+        let _time = 0;
+        const _timestamps = []; //all time stamps as numbers
+        const getAltitude = (z) => {
+          if (altitude === 'undefined') {
+            return 0;
+          } else {
+            let alt = Math.round(data.data[z].alt);
+            if (Number.isFinite(alt)) {
+              return alt;
+            } else {
+              return -1;
+            }
+          }
+        }
+        //for bounding box and zooming into data
+        minLon = data.data[0].lon;
+        maxLon = data.data[0].lon;
+        minLat = data.data[0].lat;
+        maxLat = data.data[0].lat;
+        //loop through data
+        while (z < dataLength) {
+          lon = data.data[z].lon;
+          lat = data.data[z].lat;
+          if (Number.isFinite(lon) && Number.isFinite(lat)) {
+            coords[x].push([Math.round(lon * 1000000) / 1000000, Math.round(lat * 1000000) / 1000000, getAltitude(z)]);
+            minLon = (lon < minLon) ? lon : minLon;
+            maxLon = (lon > maxLon) ? lon : maxLon;
+            minLat = (lat < minLat) ? lat : minLat;
+            maxLat = (lat > maxLat) ? lat : maxLat;
+            _datetime = new Date(data.data[z].timestamp.substring(0, 19));
+            _time = _datetime.getTime() / 1000; //unix time (seconds)
+            datetimes[x].push(_time); //time stamps per individual
+            _timestamps.push(_time); //all time stamps
+          }
+          y++;
+          //end of data or next individual
+          if (z + 1 === dataLength) {
+            species.push(data.data[z].species);
+            animalID.push(data.data[z].animal_id);
+            break;
+          } else if (data.data[z].animal_id !== data.data[z + 1].animal_id) {
+            species.push(data.data[z].species);
+            animalID.push(data.data[z].animal_id);
+            x = x + 1;
+            coords.push([]);
+            datetimes.push([]);
+            distance.push([]);
+            y = 0;
+          }
+          z++;
+        }
+        //number of individuals: for number of tracks, and drawTracks and timeSlider functions
+        ids = animalID.length;
+        //define the track colour for each species or individual if only 1 species
+        const uniqueSpecies = [...new Set(species)];
+        const uniqueSpeciesCount = uniqueSpecies.length
+        if (colour[0] === undefined) {
+          x = 0;
+          y = 0;
+          while (x < ids) {
+            colour.push(PALETTE[y]);
+            x++;
+            if (uniqueSpeciesCount === 1 || species[x] !== species[x - 1]) {
+              y = y + 1;
+            }
+          }
+        }
+        //normalise time stamps...
+        //1. remove duplicated time stamps and sort min to max
+        const uniqueTimestamps = [...new Set(_timestamps)];
+        uniqueTimestamps.sort(function(a, b) {
+          return a - b;
+        });
+        //2. find sampling interval
+        //based on median of difference (in seconds) between consecutive locations
+        const timeDiff = [];
+        let j = 0;
+        const maxIndex = uniqueTimestamps.length - 1;
+        for (let i = 0; i < maxIndex; i++) {
+          let _timeDiff = uniqueTimestamps[i + 1] - uniqueTimestamps[j];
+          //if difference > 59 secs and < 3 hrs, add to timediff variable (for locations recorded in bursts and when there are on/off times)
+          if (_timeDiff > 59) {
+            j = i + 1;
+            // if (_timeDiff <= (3 * 3600)) {
+              timeDiff.push(_timeDiff);
+            // }
+          }
+        }
+        timeDiff.sort(function(a, b) { return a - b; });
+        const timeDiffLength = timeDiff.length;
+        if (timeDiffLength % 2 === 0) { //is even, use average of two middle numbers
+          sampleInterval = (timeDiff[timeDiffLength / 2 - 1] + timeDiff[timeDiffLength / 2]) / 2;
+        } else { //is odd, use middle number only
+          sampleInterval = timeDiff[(timeDiffLength - 1) / 2];
+        }
+        //3. round unique time stamps to nearest multiple of sample interval and remove duplicates
+        minTimestamp = uniqueTimestamps[0];
+        utsLength = uniqueTimestamps.length - 1;
+        for (let i = 0; i <= utsLength; i++) {
+          uniqueTimestamps[i] = Math.round((uniqueTimestamps[i] - minTimestamp) / sampleInterval);
+          if (uniqueTimestamps[i] !== uniqueTimestamps[i - 1]) {
+            uniqueTimes.push(uniqueTimestamps[i]);
+          }
+        }
+        utsLength = uniqueTimes.length - 1;
+        maxTime = uniqueTimes[utsLength];
+
+        //4. find expected sequence and check if interpolation is necessary
+        //... method should work for continuous and non-continuous data
+        const islands = []; //chunks of continuous time stamps, given the sample interval
+        const gaps = []; //length of each gap between islands
+        let startTimes = []; //start time of each island
+        let _td = 1;
+        for (let i = 1; i <= utsLength; i++) {
+          if(uniqueTimes[i] - uniqueTimes[i - 1] === 1){
+            _td++;
+          } else {
+            islands.push(_td);
+            _td = 1;
+            gaps.push((uniqueTimes[i] - uniqueTimes[i - 1]) - 1);
+            startTimes.push(uniqueTimes[i]);
+          }
+        }
+        //check if any missing values detected
+        const gapsLength = gaps.length;
+        if (gapsLength !== 0) {
+          //find median length of islands, gaps and start times (for non-continuous data)
+          const sTLength = startTimes.length;
+          for (let i = 0; i < sTLength; i++) { //remove dates, keep time in seconds
+            startTimes[i] = ((startTimes[i] * sampleInterval + minTimestamp) - Math.floor((startTimes[i] * sampleInterval + minTimestamp)/86400) * 86400) / sampleInterval;
+          }
+          islands.sort(function(a, b) { return a - b; });
+          gaps.sort(function(a, b) { return a - b; });
+          startTimes.sort(function(a, b) { return a - b; });
+          let island = 0;
+          let gap = 0;
+          let startTime = 0;
+          if (sTLength % 2 === 0) { //is even, use average of two middle numbers
+            island = (islands[sTLength / 2 - 1] + islands[sTLength / 2]) / 2;
+            gap = (gaps[sTLength / 2 - 1] + gaps[sTLength / 2]) / 2;
+            startTime = (startTimes[sTLength / 2 - 1] + startTimes[sTLength / 2]) / 2;
+          } else { //is odd, use middle number only
+            island = islands[(sTLength - 1) / 2];
+            gap = gaps[(sTLength - 1) / 2];
+            startTime = startTimes[(sTLength - 1) / 2];
+          }
+          //get expected times...
+          let expTimes = [];
+          if ((island + gap) * sampleInterval === 86400) {//based on island, gap and maxTime
+            let count = 0;
+            let mgap = 0;
+            let _val = 0;
+            while (_val < maxTime) {
+              for (let i = 0; i < island; i++) {
+                _val = count + (gap * mgap);
+                expTimes.push(_val);
+                count++;
+              }
+              mgap++;
+            }
+            //check if first time stamp is equal to expected start time (median start time)
+            const firstStartTime = (minTimestamp - Math.floor(minTimestamp/86400) * 86400) / sampleInterval;
+            if (firstStartTime != startTime) {
+              let newST = firstStartTime - startTime;
+              expTimes.slice(newST);
+              const newSTLength = newST.length;
+              for (let i = 0; i < newSTLength; i++) {
+                expTimes[i] = expTimes[i] - newST;
+              }
+            }
+          } else {//based only on maxTime
+            for (let i = 0; i < maxTime; i++) {
+              expTimes.push(i);
+            }
+          }
+          //update unique times
+          uniqueTimes = [...expTimes];
+          utsLength = uniqueTimes.length - 1;
+        }
+
+        //create array of time stamps for displaying in counter
+        for (let i = 0; i <= utsLength; i++) {
+          timestamps.push(dayjs.unix(uniqueTimes[i] * sampleInterval + minTimestamp).format('YYYY MMM DD HH:mm'));
+        }
+        //get dates to display above range slider
+        let nTicks = rsTicks.length - 1;
+        let maxTimeSec = maxTime * sampleInterval;
+        for (let i = 0; i <= nTicks; i++) {
+          let j = Math.round(rsTicks[i] * utsLength);
+          if (maxTimeSec <= 86400) {
+            useDates.push(timestamps[j].slice(12));
+          } else if (maxTimeSec <= 31536000) {
+            useDates.push(timestamps[j].slice(5, 12));
+          } else {
+            useDates.push("'" + timestamps[j].slice(2, 9));
+          }
+        }
+
+        //5. round time stamps per individual to nearest multiple of sample interval
+        //... interpolate missing time stamps if necessary (based expected time stamps)
+        //... calculate distance between subsequent non-interpolated locations (for graph)
+        //... push markers, tracks and graph data to objects
+        if (gapsLength === 0) {
+          for (let i = 0; i < ids; i++) {
+            let newTime = 0;
+            let newDistance = 0;
+            let prevDistance = 0;
+            let dtLength = datetimes[i].length;
+            for (let j = 0; j < dtLength; j++) {
+              //push markers and return newTime
+              newTime = createMarker(newTime, i, j);
+              datetimes[i][j] = newTime;
+              //distance
+              if (j !== 0) {
+                newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
+              }
+              distance[i].push({x: newTime, y: newDistance});
+              prevDistance = Number(newDistance);
+            }
+            //push tracks and graph data, and return max distance for graph
+            maxDist = createTrack(i, newDistance);
+          }
+        } else {
+          for (let i = 0; i < ids; i++) {
+            let newTime = 0;
+            let prevTime = 0;
+            let tDiff = 0;
+            let newCoords = [];
+            let newDistance = 0;
+            let prevDistance = 0;
+            let j = 0;
+            let newJ = 0;
+            while (j < datetimes[i].length) {
+              //push markers and return newTime
+              newTime = createMarker(newTime, i, j);
+              if (j !== 0) {
+                //check if any missing datetimes and interpolate (plus coordinates)
+                tDiff = newTime - prevTime;
+                newJ = Number(j);
+                if (tDiff > 1) {
+                  for (let k = 1; k < tDiff; k++) {
+                    let iTime = prevTime + k;
+                    if (uniqueTimes.indexOf(iTime, newJ - 1) > 0) { //for non-continuous sampling
+                      datetimes[i].splice(newJ, 0, iTime);
+                      // newCoords = interPoint(coords[i][newJ - 1][1], coords[i][newJ - 1][0], coords[i][newJ][1], coords[i][newJ][0], 1/(tDiff - (k - 1))); //interpolate
+                      newCoords = [coords[i][newJ - 1][0], coords[i][newJ - 1][1]]; //repeat previous
+                      newCoords.push(coords[i][newJ - 1][2]); //add altitude data
+                      coords[i].splice(newJ, 0, newCoords);
+                      newJ = newJ + 1;
+                    }
+                  }
+                  datetimes[i][newJ] = newTime;
+                } else {
+                  datetimes[i][j] = newTime;
+                }
+                newDistance = calcDistance(coords[i][j - 1][1], coords[i][j - 1][0], coords[i][j][1], coords[i][j][0]) + prevDistance;
+                j = newJ + 1;
+              } else {
+                datetimes[i][j] = newTime;
+                j = j + 1;
+              }
+              distance[i].push({x: newTime, y: newDistance});
+              prevDistance = Number(newDistance);
+              prevTime = Number(newTime);
+            }
+            //push tracks and graph data, and return max distance for graph
+            maxDist = createTrack(i, newDistance);
+          }
+        }
+        //order markers by timestamp instead of id for nicer look when plotted
+        markers.sort((a, b) => a.timestamps - b.timestamps);
+        markersLength = markers.length;
+        displayTime = [timestamps[0], timestamps[0]];
+        useColourHex.push(...colourHex);
+        useFontColour.push(...fontColour);
+        dataLoaded = true;
+      }
+    });
+  }
+
   callLoadData = (e) => {
-    this.setState({ fileInputDisabled: true });
-    loadData(e);
+    this.setState({
+      fileInputDisabled: true,
+      progDisplay: 'block'
+    });
+    this.loadData(e);
     this.checkIfDataLoaded();
   }
 
   checkIfDataLoaded = async () => {
+    this.setState({
+      fileInputDisplay: 'none',
+      progFileName: fileName.name
+    });
     while (dataLoaded === false) {
-      await sleep(1000);
+      await sleep(100);
     }
     this.flyToData();
   }
@@ -546,6 +557,8 @@ class App extends Component {
       markerData: markers,
       tsRange: timeRange,
       counterTime: displayTime[0] + ' to ' + displayTime[1],
+      progDisplay: 'none',
+      progAnimation: 0,
       sliderDates: useDates,
       sliderSteps: utsLength,
       sliderTicks: rsTicks,
@@ -553,7 +566,6 @@ class App extends Component {
       graphData: plotData,
       graphMaxY: maxDist,
       graphSeriesOpacity: seriesOpacity,
-      fileInputDisplay: 'none',
       controlsDisplay: 'flex'
     });
   }
@@ -853,7 +865,7 @@ class App extends Component {
   }
 
   render() {
-    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, counterColour, counterShadow, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay} = this.state;
+    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, counterColour, counterShadow, progDisplay, progFileName, progAnimation, progDots, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay} = this.state;
 
     return (
       <div id='map'>
@@ -896,6 +908,14 @@ class App extends Component {
         </div>
         <div className='counter' style={{color: counterColour, textShadow: counterShadow}}>
           <p>{counterTime}</p>
+        </div>
+        <div className='dataLoadingProgress' style={{display: progDisplay}}>
+          <p>File: {progFileName}</p>
+          <p className='readingData'>Status: reading data
+            {progDots.map((index) => (
+              <span key={index} style={{animationIterationCount: progAnimation}}>.</span>
+            ))}
+          </p>
         </div>
         <div className='playbackOptions' style={{display: controlsDisplay}}>
           <button title='play/pause/replay' id={playButton} className='button' onClick={this.startPlotting}></button>
