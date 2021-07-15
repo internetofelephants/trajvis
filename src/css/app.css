@@ -44,6 +44,35 @@ body {
     margin-bottom: 0;
 }
 
+.dataLoadingProgress {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: auto;
+  height: auto;
+  padding: 10px;
+  font-family: 'Courier New', monospace;
+}
+.dataLoadingProgress p {
+    margin: 0;
+}
+@keyframes blink {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    100% { opacity: 0; }
+}
+.readingData span {
+    animation-name: blink;
+    animation-duration: 1.4s;
+    animation-fill-mode: both;
+}
+.readingData span:nth-child(2) {
+    animation-delay: .2s;
+}
+.readingData span:nth-child(3) {
+    animation-delay: .4s;
+}
+
 .centerDiv {
   flex-wrap: wrap;
   position: absolute;
