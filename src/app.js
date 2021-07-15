@@ -1,3 +1,31 @@
+// Copyright (c) 2021, Internet of Elephants
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// 1. Redistributions of source code must retain the above copyright notice, this
+//    list of conditions and the following disclaimer.
+//
+// 2. Redistributions in binary form must reproduce the above copyright notice,
+//    this list of conditions and the following disclaimer in the documentation
+//    and/or other materials provided with the distribution.
+//
+// 3. Neither the name of the copyright holder nor the names of its
+//    contributors may be used to endorse or promote products derived from
+//    this software without specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+// DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+// FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+// SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+// CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+// OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import React, { Component } from 'react';
 import './css/app.css';
 import { hot } from 'react-hot-loader';
@@ -10,7 +38,6 @@ import { StaticMap, MapContext, NavigationControl, ScaleControl } from 'react-ma
 import renderLayers from './layers.js';
 import Graph from './graph.js';
 import Slider from './slider.js';
-
 
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN;
 
@@ -105,7 +132,7 @@ const rgbToHex = (rgb) => '#' + rgb.map(x => {
 }).join('')
 
 //calculate distance between consecutive locations
-//taken from: https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula
+//from https://stackoverflow.com/questions/27928/calculate-distance-between-two-latitude-longitude-points-haversine-formula
 const calcDistance = (lat1, lon1, lat2, lon2) => {
   const p = 0.017453292519943295; // Math.PI / 180
   const c = Math.cos;
@@ -114,7 +141,7 @@ const calcDistance = (lat1, lon1, lat2, lon2) => {
 }
 
 //interpolate missing coordinates
-//take from: https://stackoverflow.com/questions/52323353/calculate-the-point-between-two-coordinates-based-on-a-percentage-spherically
+//from https://stackoverflow.com/questions/52323353/calculate-the-point-between-two-coordinates-based-on-a-percentage-spherically
 // const interPoint = (lat1, lon1, lat2, lon2, f) => {
 //   if (lat1 == lat2 && lon1 == lon2) {
 //     return [lon1, lat1];
@@ -893,7 +920,7 @@ class App extends Component {
         </DeckGL>
         <div className='centerDiv' style={{display: fileInputDisplay}}>
           <div className='welcomeBox'>
-            <p>trajVis: Visualise, animate and create videos of animal movement data on an interactive map.</p>
+            <p>trajVis: Visualise, animate and create videos of animal movement data from GPS tags.</p>
             <p>To begin, select a csv file containing movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
             <div className='fileInput'>
