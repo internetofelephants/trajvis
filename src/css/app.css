@@ -95,7 +95,7 @@ body {
   position: relative;
   top: 20px;
   width: 100%;
-  justify-content: flex-end;
+  justify-content: center;
 }
 input[type='file'] {
   display: none;
@@ -103,7 +103,8 @@ input[type='file'] {
 .customFileInput {
   width: 50px;
   height: 50px;
-  margin-right: 32%;
+  /* margin-right: 32%; */
+  margin: 0 32% 0 32%;
   border-radius: 4px;
   background: rgb(220, 220, 220);
   background-position: center center;
@@ -112,6 +113,21 @@ input[type='file'] {
   background-image: svg-load('icons/upload.svg', fill: rgb(0, 0, 0));
   box-shadow: 0 0 6px 0 rgba(0, 0, 0, 0.4);
   cursor: pointer;
+}
+.githubLogo {
+  position: relative;
+  width: 30px;
+  height: auto;
+  margin: 26px 0 -26px 0;
+}
+.githubLogo a {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: 100%;
+  background-image: svg-load('icons/github_logo.svg', fill: rgb(180, 180, 180));
 }
 .ioeLogoBig {
   position: relative;
