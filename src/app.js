@@ -923,13 +923,17 @@ class App extends Component {
             <p>trajVis: Visualise, animate and create videos of animal movement data from GPS tags.</p>
             <p>To begin, select a csv file containing movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
+            <p>For feature requests, contributing code or reporting bugs, visit our GitHub page.</p>
             <div className='fileInput'>
+              <div className='githubLogo'>
+                <a href='https://github.com/internetofelephants/trajvis' target='_blank'></a>
+              </div>
               <label className='customFileInput'>
                 <input id='defaultFileInput' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
               </label>
-            <div className='ioeLogoBig'>
-              <a href='https://www.internetofelephants.com/' target='_blank'></a>
-            </div>
+              <div className='ioeLogoBig'>
+                <a href='https://www.internetofelephants.com/' target='_blank'></a>
+              </div>
             </div>
           </div>
         </div>
