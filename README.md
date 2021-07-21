@@ -9,6 +9,8 @@ Visualise, animate and create videos of animal movement data from GPS tags.
 - Graph showing cumulative distance
 - Base maps from CARTO (light and dark) and Mapbox (satellite)
 
+![](https://https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo.gif)
+
 ## Usage
 To begin, select a csv file containing movement data for a single or multiple individuals. The file must contain the following headers:
 - species
