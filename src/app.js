@@ -60,6 +60,7 @@ let dataLoaded = false;
 const species = []; //species for each individual to be plotted
 const animalID = []; //unique identification/name of each individual
 const datetimes = [[]]; //time stamps of each individual
+let realTS = undefined; //unmodiefied time stamps for displaying in marker tooltip
 const coords = [[]]; //coordinates for all tracks and markers
 let ids = 0; //total number of individuals
 const colour = []; //track colour for each species or individual
@@ -176,7 +177,7 @@ const calcDistance = (lat1, lon1, lat2, lon2) => {
 
 const createMarker = (newTime, i, j) => {
   newTime = Math.round((datetimes[i][j] - minTimestamp) / sampleInterval);
-  let marker = {id:i,species:species[i],animal:animalID[i],colour:colour[i],radius:r,coordinates:coords[i][j],timestamps:newTime};
+  let marker = {id:i,species:species[i],animal:animalID[i],colour:colour[i],radius:r,coordinates:coords[i][j],timestamps:newTime, realTS:realTS[i][j]};
   markers.push(marker);
   return newTime;
 }
@@ -315,6 +316,7 @@ class App extends Component {
           }
           z++;
         }
+        realTS = [...datetimes];
         //number of individuals: for number of tracks, and drawTracks and timeSlider functions
         ids = animalID.length;
         //define the track colour for each species or individual if only 1 species
@@ -900,7 +902,7 @@ class App extends Component {
           initialViewState={viewport}
           controller={true}
           layers={renderLayers({...this.state})}
-          getTooltip={({object}) => object && `species: ${object.species}\n tag: ${object.animal}\n ts: ${dayjs.unix(object.timestamps * sampleInterval + minTimestamp).format('YYYY-MM-DD HH:mm')}\n altitude: ${object.coordinates[2]}`}
+          getTooltip={({object}) => object && `species: ${object.species}\n tag: ${object.animal}\n ts: ${dayjs.unix(object.realTS).format('YYYY-MM-DD HH:mm:ss')}\n altitude: ${object.coordinates[2]}`}
           ContextProvider={MapContext.Provider}
           parameters={{
             depthTest: false
