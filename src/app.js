@@ -119,7 +119,7 @@ const displayMediaOptions = {
   },
   audio: false
 };
-const mediaRecorderOptions = { mimeType : 'video/webm' };
+const mediaRecorderOptions = { mimeType : 'video/webm; codecs=vp9' };
 
 //sleep function for checkIfDataLoaded function
 const sleep = (ms) => {
