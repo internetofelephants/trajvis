@@ -10,7 +10,7 @@ Visualise, animate and create videos of animal movement data from GPS tags.
 - Base maps from CARTO (light and dark) and Mapbox (satellite)
 
 ![](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_01.gif)
-Four spider monkeys (_Ateles geoffroyi_) on Barro Colorado Island, Panama (6 GPS fixes every 4 minutes). Data from Crofoot _et al._
+Four spider monkeys (_Ateles geoffroyi_) on Barro Colorado Island, Panama. Data courtesy of Prof Meg Crofoot (University of Konstanz) and colleagues.
 
 ## Usage
 To begin, select a csv file containing movement data for a single or multiple individuals. The file must contain the following headers:
@@ -28,6 +28,7 @@ To begin, select a csv file containing movement data for a single or multiple in
 - zoomable graph
 - option to add polygons as shapefile or geojson
 - add option to create popups
+- hide/minimize UI during recording
 - allow sharing with data via link
 - add 3D map
 
