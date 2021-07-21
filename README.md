@@ -5,14 +5,12 @@ Visualise, animate and create videos of animal movement data from GPS tags.
 - Visualise data as lines and points (pickable)
 - Switch individuals on and off
 - Playback controls and range slider
-- Record videos
+- Record videos (via the Screen Capture API)
 - Graph showing cumulative distance
 - Base maps from CARTO (light and dark) and Mapbox (satellite)
 
 ![](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_01.gif)
-```diff
-# Four spider monkeys (_Ateles geoffroyi_) on Barro Colorado Island, Panama (4 fixes every 4 minutes). Data from Crofoot _et al._
-```
+Four spider monkeys (_Ateles geoffroyi_) on Barro Colorado Island, Panama (6 GPS fixes every 4 minutes). Data from Crofoot _et al._
 
 ## Usage
 To begin, select a csv file containing movement data for a single or multiple individuals. The file must contain the following headers:
