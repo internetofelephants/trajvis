@@ -1,6 +1,8 @@
 # trajVis
 Visualise, animate and create videos of animal movement data from GPS tags.
 
+https://internetofelephants.github.io/trajvis
+
 ## Features
 - Visualise data as lines and points (pickable)
 - Switch individuals on and off
@@ -9,7 +11,7 @@ Visualise, animate and create videos of animal movement data from GPS tags.
 - Graph showing cumulative distance
 - Base maps from CARTO (light and dark) and Mapbox (satellite)
 
-![](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_01.gif)
+![GIF of trajVis demo 01](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_01.gif)
 Four spider monkeys (_Ateles geoffroyi_) on Barro Colorado Island, Panama. Data courtesy of Prof Meg Crofoot (University of Konstanz) and colleagues.
 
 ## Usage
@@ -21,7 +23,7 @@ To begin, select a csv file containing movement data for a single or multiple in
 - lat (latitude in decimal degrees)
 - alt (altitude in meters, optional)
 
-![](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_02.gif)
+![GIF of trajVis demo 02](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_02.gif)
 
 ## Roadmap
 - add a graph for altitude
