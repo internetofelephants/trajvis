@@ -11,7 +11,7 @@ https://internetofelephants.github.io/trajvis
 - Graph showing cumulative distance
 - Base maps from CARTO (light and dark) and Mapbox (satellite)
 
-![GIF of trajVis demo 01](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_01.gif)
+![GIF of trajVis demo 01](https://github.com/internetofelephants/trajvis/main/website/trajVis_demo_01.gif)
 Four spider monkeys (_Ateles geoffroyi_) on Barro Colorado Island, Panama. Data courtesy of Prof Meg Crofoot (University of Konstanz) and colleagues.
 
 ## Usage
