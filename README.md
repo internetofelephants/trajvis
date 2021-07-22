@@ -23,7 +23,7 @@ To begin, select a csv file containing movement data for a single or multiple in
 - lat (latitude in decimal degrees)
 - alt (altitude in meters, optional)
 
-![example of csv data](https://github.com/internetofelephants/trajvis/blob/main/website/sample_csv_data.png)
+![example of csv data](https://github.com/internetofelephants/trajvis/blob/main/website/sample_csv_file.png)
 
 ![GIF of trajVis demo 02](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_02.gif)
 
