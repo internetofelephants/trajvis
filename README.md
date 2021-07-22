@@ -38,6 +38,7 @@ To begin, select a csv file containing movement data for a single or multiple in
 
 ## Support
 For help with usage, email support@internetofelephants.com
+
 For reporting bugs, please open an issue.
 
 ## Contributing
