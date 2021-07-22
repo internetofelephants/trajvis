@@ -650,7 +650,7 @@ class App extends Component {
       videoURL = URL.createObjectURL(completeBlob);
       const videoLink = document.createElement('a');
       videoLink.href = videoURL;
-      videoLink.download = 'trajVisRecording.mp4';
+      videoLink.download = 'trajVisRec.webm';
       videoLink.click(); //opens the "Save As" dialogue window
     };
 
