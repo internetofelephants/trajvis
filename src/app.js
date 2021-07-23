@@ -242,7 +242,9 @@ class App extends Component {
     graphButton: 'graphOff',
     fileInputDisplay: 'flex',
     fileInputDisabled: false,
-    controlsDisplay: 'none'
+    controlsDisplay: 'none',
+    helpDisplay: 'none',
+    helpButton: 'helpOff'
   };
 
   //open "file browswer window"...
@@ -699,6 +701,25 @@ class App extends Component {
     }
   }
 
+  showHelp = () => {
+    if (this.state.helpDisplay === 'none') {
+      this.setState({
+        helpDisplay: 'flex',
+        helpButton: 'helpOn'
+      });
+      if (playbackState === 1) {
+        playbackState = 0;
+        cancelAnimationFrame(playback);
+        this.setState({ playButton: 'play' });
+      }
+    } else {
+      this.setState({
+        helpDisplay: 'none',
+        helpButton: 'helpOff'
+      });
+    }
+  }
+
   graphVisibility = () => {
     if (this.state.graphVisible === 'visible') {
       this.setState({
@@ -894,7 +915,7 @@ class App extends Component {
   }
 
   render() {
-    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, counterColour, counterShadow, progDisplay, progFileName, progAnimation, progDots, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay} = this.state;
+    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, counterColour, counterShadow, progDisplay, progFileName, progAnimation, progDots, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay, helpDisplay, helpButton} = this.state;
 
     return (
       <div id='map'>
@@ -959,6 +980,7 @@ class App extends Component {
           <button title='tracks' id={trackButton} className='button' onClick={this.trackVisibility}></button>
           <button title='graph' id={graphButton} className='button' onClick={this.graphVisibility}></button>
           <button title='map styles' id='mapIcon' className='button' onClick={this.toggleMapStyle}></button>
+          <button title='help' id={helpButton} className='button' onClick={this.showHelp}></button>
         </div>
         <div className='ioeLogoSmall' style={{display: controlsDisplay}}>
           <a href='https://www.internetofelephants.com/' target='_blank'></a>
@@ -979,6 +1001,29 @@ class App extends Component {
             <li className='animalListItem' key={index} id={index} onClick={this.toggleAnimals} style={{background: animalListBGCol[index], color: animalListCol[index]}}>{name}</li>
           ))}
         </ul>
+        <div className='helpDiv' style={{display: helpDisplay}}>
+          <div className='helpText'>
+            <p>trajVis: Visualise, animate and create videos of animal movement data from GPS tags</p>
+            <hr></hr>
+            <p>Control panel:</p>
+            <ul>
+              <li><b>Range slider</b> allows moving forward and backward in time, and changing the time window (see below)</li>
+              <li><b>Play</b> / Pause / Replay</li>
+              <li>Change <b>playback speed</b></li>
+              <li>Show data incrementaly or create a specific <b>time window</b></li>
+              <li>Record a <b>video</b> (via the Screen Capture API): for best results, put your browser into fullscreen, and when prompted, select the current browser tab and click Share. When you stop recording, you will be prompted to save the video as a webm file</li>
+              <li>Show data as <b>points</b> (hover over a point to see its timestamp)</li>
+              <li>Show data as <b>lines</b> (on by default)</li>
+              <li>Show <b>graph</b> with cumulative distance</li>
+              <li>Switch between <b>base maps</b>: light and dark (CARTO) and satellite (Mapbox)</li>
+            </ul>
+            <p>Switch lines and points on or off for each individual by clicking the buttons to the right</p>
+            <p>To add a different data set, refresh your browser</p>
+            <hr></hr>
+            <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a></p>
+            <p>Copyright (c) 2021, <a href='https://www.internetofelephants.com/' target='_blank'>Internet of Elephants</a></p>
+          </div>
+        </div>
       </div>
     );
   }
