@@ -28,13 +28,13 @@
 
 import React, { Component } from 'react';
 import './css/app.css';
+import 'mapbox-gl/dist/mapbox-gl.css';
 import { hot } from 'react-hot-loader';
 import Papa from 'papaparse';
 import dayjs from 'dayjs';
 import simplify from 'simplify-js';
 import ysFixWebmDuration from 'fix-webm-duration';
 import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
-import { BASEMAP } from '@deck.gl/carto'; //free Carto map - no access token required
 import { StaticMap, MapContext, NavigationControl, ScaleControl } from 'react-map-gl';
 import renderLayers from './layers.js';
 import Graph from './graph.js';
@@ -204,7 +204,7 @@ class App extends Component {
   state = {
     viewport: mapView,
     // baseMap: 'http://localhost:3650/api/maps/basic/style.json',
-    baseMap: BASEMAP.POSITRON, //free Carto map - no access token required
+    baseMap: 'light-v10',
     animals: [],
     animalListBGCol: [],
     animalListCol: [],
@@ -682,21 +682,21 @@ class App extends Component {
   }
 
   toggleMapStyle = () => {
-    if (this.state.baseMap === BASEMAP.POSITRON) {
+    if (this.state.baseMap === 'light-v10') {
       this.setState({
-        baseMap: BASEMAP.DARK_MATTER,
+        baseMap: 'dark-v10',
         counterColour: 'rgb(255, 255, 255)',
         counterShadow: '0 0 20px rgb(0, 0, 0)'
       });
-    } else if (this.state.baseMap === BASEMAP.DARK_MATTER) {
+    } else if (this.state.baseMap === 'dark-v10') {
       this.setState({
-        baseMap: 'mapbox://styles/mapbox/satellite-v9?optimize=true',
+        baseMap: 'satellite-v9',
         trackOpacity: 0.9,
         markerOpacity: 0.3
       });
     } else {
       this.setState({
-        baseMap: BASEMAP.POSITRON,
+        baseMap: 'light-v10',
         counterColour: 'rgb(0, 0, 0)',
         counterShadow: '0 0 20px rgb(255, 255, 255)',
         trackOpacity: 0.26,
@@ -935,7 +935,7 @@ class App extends Component {
         >
           <StaticMap
             mapboxApiAccessToken={MAPBOX_TOKEN}
-            mapStyle={baseMap}
+            mapStyle={'mapbox://styles/mapbox/' + baseMap + '?optimize=true'}
           >
           </StaticMap>
           <div className='zoomButton'>
@@ -1015,11 +1015,11 @@ class App extends Component {
               <li><b>Play</b> / Pause / Replay</li>
               <li>Change <b>playback speed</b></li>
               <li>Show data incrementaly or create a specific <b>time window</b></li>
-              <li>Record a <b>video</b> (via the Screen Capture API): for best results, put your browser into fullscreen, and when prompted, select the current browser tab and click Share. When you stop recording, you will be prompted to save the video as a <a href='https://www.webmproject.org/' target='_blank'>webm</a> file which can be played directly in your web browser</li>
+              <li>Record a <b>video</b> (via the Screen Capture API): for best results, put your browser into full screen, and when prompted, select the current tab and click Share. When you stop recording, you will be prompted to save the video as a <a href='https://www.webmproject.org/' target='_blank'>webm</a> file which can be played directly in your browser</li>
               <li>Show data as <b>points</b> (hover over a point to see its timestamp)</li>
               <li>Show data as <b>lines</b> (on by default)</li>
               <li>Show <b>graph</b> with cumulative distance</li>
-              <li>Switch between <b>base maps</b>: light and dark (CARTO) and satellite (Mapbox)</li>
+              <li>Switch between <b>base maps</b>: light, dark and satellite (<a href='https://www.mapbox.com/' target='_blank'>Mapbox</a>)</li>
             </ul>
             <p>Switch lines and points on or off for each individual by clicking the buttons to the right</p>
             <p>To add a different data set, refresh your browser</p>

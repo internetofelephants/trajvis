@@ -37,7 +37,6 @@
     "webpack-dev-server": "^3.11.2"
   },
   "dependencies": {
-    "@deck.gl/carto": "^8.4.16",
     "dayjs": "^1.10.6",
     "deck.gl": "^8.4.16",
     "fix-webm-duration": "^1.0.0",
