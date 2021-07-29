@@ -32,6 +32,7 @@ import { hot } from 'react-hot-loader';
 import Papa from 'papaparse';
 import dayjs from 'dayjs';
 import simplify from 'simplify-js';
+import ysFixWebmDuration from 'fix-webm-duration';
 import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
 import { BASEMAP } from '@deck.gl/carto'; //free Carto map - no access token required
 import { StaticMap, MapContext, NavigationControl, ScaleControl } from 'react-map-gl';
@@ -109,7 +110,7 @@ let then = Date.now(); //for drawTracks function
 let delta = now - then; //for drawTracks function
 
 //for video input and output variables and parameters
-let recorder, stream, videoURL;
+let recorder, stream, videoURL, videoStartTime;
 let recording = false;
 const displayMediaOptions = {
   video: {
@@ -648,15 +649,18 @@ class App extends Component {
     const chunks = [];
     recorder.ondataavailable = (e) => chunks.push(e.data);
     recorder.onstop = () => {
+      let duration = Date.now() - videoStartTime;
       const completeBlob = new Blob(chunks, { type: chunks[0].type });
-      videoURL = URL.createObjectURL(completeBlob);
-      const videoLink = document.createElement('a');
-      videoLink.href = videoURL;
-      videoLink.download = 'trajVisRec.webm';
-      videoLink.click(); //opens the "Save As" dialogue window
+      ysFixWebmDuration(completeBlob, duration, function(fixedBlob) {
+        videoURL = URL.createObjectURL(fixedBlob);
+        const videoLink = document.createElement('a');
+        videoLink.href = videoURL;
+        videoLink.download = 'trajVisRec.webm';
+        videoLink.click(); //opens the "Save As" dialogue window
+      });
     };
-
     recorder.start();
+    videoStartTime = Date.now();
   }
 
   recordScreen = () => {
@@ -1011,7 +1015,7 @@ class App extends Component {
               <li><b>Play</b> / Pause / Replay</li>
               <li>Change <b>playback speed</b></li>
               <li>Show data incrementaly or create a specific <b>time window</b></li>
-              <li>Record a <b>video</b> (via the Screen Capture API): for best results, put your browser into fullscreen, and when prompted, select the current browser tab and click Share. When you stop recording, you will be prompted to save the video as a webm file</li>
+              <li>Record a <b>video</b> (via the Screen Capture API): for best results, put your browser into fullscreen, and when prompted, select the current browser tab and click Share. When you stop recording, you will be prompted to save the video as a <a href='https://www.webmproject.org/' target='_blank'>webm</a> file which can be played directly in your web browser</li>
               <li>Show data as <b>points</b> (hover over a point to see its timestamp)</li>
               <li>Show data as <b>lines</b> (on by default)</li>
               <li>Show <b>graph</b> with cumulative distance</li>
