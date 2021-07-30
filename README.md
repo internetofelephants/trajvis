@@ -9,7 +9,7 @@ https://internetofelephants.github.io/trajvis
 - Playback controls and range slider
 - Record videos (via the Screen Capture API)
 - Graph showing cumulative distance
-- Base maps from CARTO (light and dark) and Mapbox (satellite)
+- Base maps from Mapbox (light, dark and satellite)
 
 ![GIF of trajVis demo 01](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_01.gif)
 Four spider monkeys (_Ateles geoffroyi_) on Barro Colorado Island, Panama. Data courtesy of Prof Meg Crofoot (University of Konstanz) and colleagues.
@@ -23,6 +23,8 @@ To begin, select a csv file containing movement data for a single or multiple in
 - lat (latitude in decimal degrees)
 - alt (altitude in meters, optional)
 
+![example of csv data](https://github.com/internetofelephants/trajvis/blob/main/website/sample_csv_file.png)
+
 ![GIF of trajVis demo 02](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_02.gif)
 
 ## Roadmap
@@ -32,10 +34,11 @@ To begin, select a csv file containing movement data for a single or multiple in
 - add option to create popups
 - hide/minimize UI during recording
 - allow sharing with data via link
-- add 3D map
+- add 3D support
 
 ## Support
 For help with usage, email support@internetofelephants.com
+
 For reporting bugs, please open an issue.
 
 ## Contributing
