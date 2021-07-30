@@ -29,6 +29,7 @@
 import React, { Component } from 'react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import './css/app.css';
+import 'react-vis/dist/style.css';
 import { hot } from 'react-hot-loader';
 import Papa from 'papaparse';
 import dayjs from 'dayjs';
