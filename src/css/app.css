@@ -29,6 +29,17 @@ body {
   left: 20px;
 }
 
+.mapboxgl-ctrl.mapboxgl-ctrl-attrib {
+  background-color: Transparent;
+  color: rgb(80, 80, 80);
+  text-shadow: 0 0 20px rgb(255, 255, 255);
+}
+.mapboxgl-ctrl-attrib-inner a {
+  color: inherit;
+  text-shadow: inherit;
+  font-family: 'Courier New', monospace;
+}
+
 .counter {
   position: absolute;
   top: 0;
@@ -95,7 +106,7 @@ body {
   position: relative;
   top: 20px;
   width: 100%;
-  justify-content: center;
+  justify-content: flex-end;
 }
 input[type='file'] {
   display: none;
@@ -103,8 +114,7 @@ input[type='file'] {
 .customFileInput {
   width: 50px;
   height: 50px;
-  /* margin-right: 32%; */
-  margin: 0 32% 0 32%;
+  margin-right: 32%;
   border-radius: 4px;
   background: rgb(220, 220, 220);
   background-position: center center;
@@ -114,21 +124,7 @@ input[type='file'] {
   box-shadow: 0 0 6px 0 rgba(0, 0, 0, 0.4);
   cursor: pointer;
 }
-.githubLogo {
-  position: relative;
-  width: 30px;
-  height: auto;
-  margin: 26px 0 -26px 0;
-}
-.githubLogo a {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  background-position: center center;
-  background-repeat: no-repeat;
-  background-size: 100%;
-  background-image: svg-load('icons/github_logo.svg', fill: rgb(180, 180, 180));
-}
+
 .ioeLogoBig {
   position: relative;
   width: 120px;
@@ -142,7 +138,7 @@ input[type='file'] {
   background-position: center center;
   background-repeat: no-repeat;
   background-size: 100%;
-  background-image: svg-load('icons/ioe_logo.svg', fill: rgb(160, 160, 160));
+  background-image: svg-load('icons/ioe_logo.svg', fill: rgb(0, 0, 0));
 }
 
 .button {
@@ -260,7 +256,7 @@ input[type='file'] {
   z-index: 1;
   position: absolute;
   right: 10px;
-  bottom: 30px;
+  bottom: 10px;
   width: 32px;
   height: 32px;
 }
@@ -271,7 +267,7 @@ input[type='file'] {
   background-position: center center;
   background-repeat: no-repeat;
   background-size: 100%;
-  background-image: svg-load('icons/ioe_logo_small.svg', fill: rgba(255, 255, 255, 0.3));
+  background-image: svg-load('icons/ioe_logo_small.svg', fill: rgba(255, 255, 255, 0.4));
 }
 
 .timeControls {

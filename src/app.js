@@ -27,8 +27,8 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import React, { Component } from 'react';
-import './css/app.css';
 import 'mapbox-gl/dist/mapbox-gl.css';
+import './css/app.css';
 import { hot } from 'react-hot-loader';
 import Papa from 'papaparse';
 import dayjs from 'dayjs';
@@ -41,6 +41,9 @@ import Graph from './graph.js';
 import Slider from './slider.js';
 
 const MAPBOX_TOKEN = process.env.MAPBOX_TOKEN;
+const mapboxLogo = document.getElementsByClassName('mapboxgl-ctrl-bottom-left');
+const mapboxAttrib = document.getElementsByClassName('mapboxgl-ctrl-bottom-right');
+const mapboxAttribIn = document.getElementsByClassName('mapboxgl-ctrl-attrib-inner');
 
 let mapView = {
   longitude: 0,
@@ -600,6 +603,8 @@ class App extends Component {
       graphSeriesOpacity: seriesOpacity,
       controlsDisplay: 'flex'
     });
+    mapboxLogo[0].style.marginBottom = '124px';
+    mapboxAttrib[0].style.marginBottom = '124px';
   }
 
   startPlotting = () => {
@@ -688,6 +693,8 @@ class App extends Component {
         counterColour: 'rgb(255, 255, 255)',
         counterShadow: '0 0 20px rgb(0, 0, 0)'
       });
+      mapboxAttribIn[0].style.color = 'rgb(180, 180, 180)';
+      mapboxAttribIn[0].style.textShadow = '0 0 20px rgb(0, 0, 0)';
     } else if (this.state.baseMap === 'dark-v10') {
       this.setState({
         baseMap: 'satellite-v9',
@@ -702,6 +709,8 @@ class App extends Component {
         trackOpacity: 0.26,
         markerOpacity: 0.16
       });
+      mapboxAttribIn[0].style.color = 'rgb(80, 80, 80)';
+      mapboxAttribIn[0].style.textShadow = '0 0 20px rgb(255, 255, 255)';
     }
   }
 
@@ -730,11 +739,15 @@ class App extends Component {
         graphVisible: 'hidden',
         graphButton: 'graphOff'
       });
+      mapboxLogo[0].style.marginBottom = '124px';
+      mapboxAttrib[0].style.marginBottom = '124px';
     } else {
       this.setState({
         graphVisible: 'visible',
         graphButton: 'graphOn'
       });
+      mapboxLogo[0].style.marginBottom = '244px';
+      mapboxAttrib[0].style.marginBottom = '244px';
     }
   }
 
@@ -950,11 +963,8 @@ class App extends Component {
             <p>trajVis: Visualise, animate and create videos of animal movement data from GPS tags.</p>
             <p>To begin, select a csv file containing movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
-            <p>For feature requests, contributing code or reporting bugs, visit our GitHub page.</p>
+            <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a>.</p>
             <div className='fileInput'>
-              <div className='githubLogo'>
-                <a href='https://github.com/internetofelephants/trajvis' target='_blank'></a>
-              </div>
               <label className='customFileInput'>
                 <input id='defaultFileInput' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
               </label>
