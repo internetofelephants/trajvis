@@ -961,17 +961,18 @@ class App extends Component {
         </DeckGL>
         <div className='centerDiv' style={{display: fileInputDisplay}}>
           <div className='welcomeBox'>
-            <p>trajVis: Visualise, animate and create videos of animal movement data from GPS tags.</p>
+            <p><b>trajVis:</b> Visualise, animate and create videos of animal movement data from GPS tags.</p>
             <p>To begin, select a csv file containing movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
+            <p>You can also download a <a href='https://github.com/internetofelephants/trajvis/raw/sample_csv/website/simulated_data.csv' target='_blank'>sample file</a> to get you started (after viewing the sample data, you'll have to reload this page to select a different file).</p>
             <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a>.</p>
             <div className='fileInput'>
-              <label className='customFileInput'>
+              <label className='customFileInput' title='Click to select a file'>
                 <input id='defaultFileInput' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
               </label>
-              <div className='ioeLogoBig'>
-                <a href='https://www.internetofelephants.com/' target='_blank'></a>
-              </div>
+            </div>
+            <div className='ioeLogoBig'>
+              <a href='https://www.internetofelephants.com/' target='_blank'></a>
             </div>
           </div>
         </div>
