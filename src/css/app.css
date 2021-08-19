@@ -87,16 +87,16 @@ body {
 .centerDiv {
   flex-wrap: wrap;
   position: absolute;
-  top: 25%;
+  top: 20%;
   width: 100%;
   height: auto;
   justify-content: center;
   font-family: 'Courier New', monospace;
 }
 .welcomeBox {
-  width: 60%;
+  width: 56%;
   height: 100%;
-  padding: 20px 20px 60px 20px;
+  padding: 20px 24px 60px 24px;
   background: rgba(255, 255, 255, 0.9);
   border-radius: 4px;
   box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.2);
@@ -127,7 +127,7 @@ input[type='file'] {
 .ioeLogoBig {
   position: absolute;
   bottom: 0;
-  right: 20%;
+  right: 22%;
   width: 120px;
   height: 60px;
 }
