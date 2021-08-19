@@ -25,6 +25,8 @@ To begin, select a csv file containing movement data for a single or multiple in
 
 ![example of csv data](https://github.com/internetofelephants/trajvis/blob/main/website/sample_csv_file.png)
 
+You can download a sample file with simulated data [here](https://github.com/internetofelephants/trajvis/raw/sample_csv/website/simulated_data.csv).
+
 ![GIF of trajVis demo 02](https://github.com/internetofelephants/trajvis/blob/main/website/trajVis_demo_02.gif)
 
 ## Roadmap
