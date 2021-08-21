@@ -962,13 +962,17 @@ class App extends Component {
         <div className='centerDiv' style={{display: fileInputDisplay}}>
           <div className='welcomeBox'>
             <p><b>trajVis:</b> Visualise, animate and create videos of animal movement data from GPS tags.</p>
-            <p>To begin, select a csv file with movement data for a single or multiple individuals.</p>
+            <p>To begin,&ensp;
+              <label className='customFileInputTxt'>select a csv file
+                <input id='defaultFileInput' name='fileInputTest' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
+              </label>
+            &ensp;with movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
             <p>You can also download a <a href='https://github.com/internetofelephants/trajvis/raw/sample_csv/website/simulated_data.csv' download target='_blank'>sample file</a> to get you started (after viewing the sample data, you'll have to reload this page to select a different file).</p>
             <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a>.</p>
             <div className='fileInput'>
-              <label className='customFileInput' title='Click to select a file'>
-                <input id='defaultFileInput' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
+              <label className='customFileInputBtn' title='Click to select a file'>
+                <input id='defaultFileInput' name='fileInputTest' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
               </label>
             </div>
             <div className='ioeLogoBig'>
