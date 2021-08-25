@@ -964,7 +964,7 @@ class App extends Component {
             <p><b>trajVis:</b> Visualise, animate and create videos of animal movement data from GPS tags.</p>
             <p>To begin,&ensp;
               <label className='customFileInputTxt'>select a csv file
-                <input id='defaultFileInput' name='fileInputTest' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
+                <input id='defaultFileInput' type='file' accept='.csv' onChange={this.callLoadData} disabled={fileInputDisabled} />
               </label>
             &ensp;with movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
@@ -972,7 +972,7 @@ class App extends Component {
             <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a>.</p>
             <div className='fileInput'>
               <label className='customFileInputBtn' title='Click to select a file'>
-                <input id='defaultFileInput' name='fileInputTest' type='file' onChange={this.callLoadData} disabled={fileInputDisabled} />
+                <input id='defaultFileInput' type='file' accept='.csv' onChange={this.callLoadData} disabled={fileInputDisabled} />
               </label>
             </div>
             <div className='ioeLogoBig'>
