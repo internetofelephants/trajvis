@@ -41,13 +41,16 @@ module.exports = {
     filename: 'bundle.js'
   },
   devServer: {
-    contentBase: path.join(__dirname, 'public/'),
+    static: {
+      directory: path.join(__dirname, 'public/')
+    },
     port: 3000,
-    publicPath: 'http://localhost:3000/dist/',
-    hotOnly: true
+    hot: 'only',
+    devMiddleware: {
+      publicPath: 'http://localhost:3000/dist/'
+    }
   },
   plugins: [
-    new webpack.DefinePlugin( { 'process.env': JSON.stringify(process.env) } ),
-    new webpack.HotModuleReplacementPlugin()
+    new webpack.DefinePlugin( { 'process.env': JSON.stringify(process.env) } )
   ]
 };
