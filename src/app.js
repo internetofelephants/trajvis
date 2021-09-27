@@ -1078,7 +1078,7 @@ class App extends Component {
               </label>
             </div>
             <div className='ioeLogoBig'>
-              <a href='https://www.internetofelephants.com/' target='_blank'></a>
+              <a href='https://www.internetofelephants.com/news/open-source' target='_blank'></a>
             </div>
           </div>
         </div>
@@ -1108,7 +1108,7 @@ class App extends Component {
           <button title='help' id={helpButton} className='button' onClick={this.showHelp}></button>
         </div>
         <div className='ioeLogoSmall' style={{display: controlsDisplay}}>
-          <a href='https://www.internetofelephants.com/' target='_blank'></a>
+          <a href='https://www.internetofelephants.com/news/open-source' target='_blank'></a>
         </div>
         <div className='timeControls' style={{display: controlsDisplay}}>
           <div className='rsDates'>
