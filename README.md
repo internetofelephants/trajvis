@@ -39,7 +39,7 @@ You can download a sample file with simulated data [here](https://github.com/int
 - add 3D support
 
 ## Support
-For help with usage, email support@internetofelephants.com
+For help with usage, email raff@internetofelephants.com
 
 For reporting bugs, please open an issue.
 

@@ -38,7 +38,7 @@ dayjs.extend(customParseFormat);
 import simplify from 'simplify-js';
 import ysFixWebmDuration from 'fix-webm-duration';
 import DeckGL, { WebMercatorViewport, FlyToInterpolator } from 'deck.gl';
-import { StaticMap, MapContext, NavigationControl, ScaleControl } from 'react-map-gl';
+import { StaticMap, MapContext, NavigationControl, ScaleControl, TRANSITION_EVENTS } from 'react-map-gl';
 import renderLayers from './layers.js';
 import Graph from './graph.js';
 import Slider from './slider.js';
@@ -60,7 +60,6 @@ let mapView = {
 //colours for tracks and markers (length should be >= number of species/individuals)
 const PALETTE = [[255, 0, 41], [102, 166, 30], [152, 78, 163], [0, 210, 213], [255, 127, 0], [175, 141, 0], [55, 126, 184], [127, 128, 205], [179, 233, 0], [196, 46, 96], [166, 86, 40], [247, 129, 191], [255, 0, 41], [102, 166, 30], [152, 78, 163], [0, 210, 213], [255, 127, 0], [175, 141, 0], [55, 126, 184], [127, 128, 205], [179, 233, 0], [196, 46, 96], [166, 86, 40], [247, 129, 191]];
 
-// const selectedFile = 'https://dl.dropbox.com/s/htfuz9khwejyhnq/test_gps_data.csv';
 let selectedFile = null;
 let dataLoaded = null;
 
@@ -175,7 +174,6 @@ class App extends Component {
 
   state = {
     viewport: mapView,
-    // baseMap: 'http://localhost:3650/api/maps/basic/style.json',
     baseMap: 'light-v10',
     animals: [],
     animalListBGCol: [],
@@ -194,7 +192,7 @@ class App extends Component {
     counterShadow: '0 0 20px rgb(255, 255, 255)',
     progDisplay: 'none',
     progFileName: '',
-    progAnimation: 'infinite',
+    progAnimation: 0,
     progDots: [0, 1, 2],
     sliderDates: [],
     sliderValue: [0, 0, 0],
@@ -217,12 +215,13 @@ class App extends Component {
     fileInputDisabled: false,
     controlsDisplay: 'none',
     helpDisplay: 'none',
-    helpButton: 'helpOff'
+    helpButton: 'helpOff',
+    blockScreenDisplay: 'none'
   };
 
   //load data from selected csv file for tracks and graph
   loadData = () => {
-    dataLoaded = null;
+    let that = this;
     Papa.parse(selectedFile, {
       download: false,
       delimeter: ',',
@@ -540,23 +539,7 @@ class App extends Component {
         catch (err){
           dataLoaded = false;
           alert('ERROR: Something went wrong when reading the selected file. Check that it has all the required fields and that all data are in the required formats.');
-          species = [];
-          animalID = [];
-          datetimes = [[]];
-          coords = [[]];
-          colour = [];
-          colourHex = [];
-          useColourHex = [];
-          fontColour = [];
-          useFontColour = [];
-          distance = [[]];
-          plotData = [];
-          seriesOpacity = [];
-          uniqueTimes = [];
-          timestamps = [];
-          useDates = [];
-          tracks = [];
-          markers = [];
+          that.clearData();
           return;
         }
       }
@@ -565,12 +548,22 @@ class App extends Component {
 
   //open "file browswer window"
   inputData = (e) => {
+    if (e.target.files.length === 0) {
+      return;
+    }
+    if (dataLoaded === true) {
+      dataLoaded = null;
+      this.clearData();
+      this.clearConsole();
+    }
     selectedFile = e.target.files[0];
     this.setState({
       fileInputDisabled: true,
       fileInputDisplay: 'none',
       progFileName: selectedFile.name,
-      progDisplay: 'block'
+      progAnimation: 'infinite',
+      progDisplay: 'block',
+      blockScreenDisplay: 'block'
     });
     let extension = selectedFile.name.split('.').pop();
     if (extension != 'csv') {
@@ -579,13 +572,71 @@ class App extends Component {
         fileInputDisplay: 'flex',
         fileInputDisabled: false,
         progFileName: '',
-        progDisplay: 'none'
+        progDisplay: 'none',
+        blockScreenDisplay: 'none'
       });
       return;
     } else {
       this.loadData();
       this.checkIfDataLoaded();
     }
+  }
+
+  clearData = () => {
+    species = [];
+    animalID = [];
+    datetimes = [[]];
+    coords = [[]];
+    colour = [];
+    colourHex = [];
+    useColourHex = [];
+    fontColour = [];
+    useFontColour = [];
+    distance = [[]];
+    maxDist = 0;
+    plotData = [];
+    seriesOpacity = [];
+    uniqueTimes = [];
+    timestamps = [];
+    useDates = [];
+    tailLength = 0;
+    speed = 1;
+    t0 = 0;
+    t = 0;
+    timeRange = [0, 0];
+    displayTime = [0, 0];
+    sliderTime = [0, 0, 0];
+    tracks = [];
+    tracksOff = true;
+    markers = [];
+    hiddenIDs = [];
+    playbackType = 0;
+  }
+
+  clearConsole = () => {
+    this.setState({
+      animals: [],
+      animalListBGCol: [],
+      animalListCol: [],
+      trackData: [],
+      trackTrail: 0,
+      markerData: [],
+      trackVisible: false,
+      markerVisible: true,
+      changeProps: false,
+      counterTime: '',
+      sliderValue: sliderTime,
+      playTypeButton: 'winOff',
+      playbackSpeed: speed,
+      markerButton: 'markersOff',
+      trackButton:'tracksOn',
+      recordButton: 'recOff',
+      graphButton: 'graphOff',
+      graphVisible: 'hidden',
+      controlsDisplay: 'none',
+    });
+    mapboxLogo[0].style.marginBottom = '0px';
+    mapboxAttrib[0].style.marginBottom = '0px';
   }
 
   checkIfDataLoaded = async () => {
@@ -599,8 +650,10 @@ class App extends Component {
         fileInputDisplay: 'flex',
         fileInputDisabled: false,
         progFileName: '',
-        progDisplay: 'none'
+        progDisplay: 'none',
+        blockScreenDisplay: 'none'
       });
+      dataLoaded = null;
     }
   }
 
@@ -613,6 +666,7 @@ class App extends Component {
       latitude,
       zoom,
       transitionDuration: 3500,
+      transitionInterruption: TRANSITION_EVENTS.IGNORE,
       transitionInterpolator: new FlyToInterpolator()
     };
     this.setState({
@@ -633,10 +687,27 @@ class App extends Component {
       graphData: plotData,
       graphMaxY: maxDist,
       graphSeriesOpacity: seriesOpacity,
-      controlsDisplay: 'flex'
+      controlsDisplay: 'flex',
+      fileInputDisabled: false,
+      blockScreenDisplay: 'none'
     });
     mapboxLogo[0].style.marginBottom = '124px';
     mapboxAttrib[0].style.marginBottom = '124px';
+  }
+
+  stopPlaybackAndRec = () => {
+    if (playbackState === 1) {
+      playbackState = 0;
+      cancelAnimationFrame(playback);
+      this.setState({ playButton: 'play' });
+    }
+    if (recording === true) {
+      recording = false;
+      recorder.stop();
+      this.setState({ recordButton: 'recOff' });
+      stream.getVideoTracks()[0].stop();
+      URL.revokeObjectURL(videoURL);
+    }
   }
 
   startPlotting = () => {
@@ -964,7 +1035,7 @@ class App extends Component {
   }
 
   render() {
-    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, counterColour, counterShadow, progDisplay, progFileName, progAnimation, progDots, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay, helpDisplay, helpButton} = this.state;
+    const {viewport, baseMap, animals, animalListBGCol, animalListCol, counterTime, counterColour, counterShadow, progDisplay, progFileName, progAnimation, progDots, sliderDates, playButton, playbackSpeed, playTypeButton, recordButton, markerButton, trackButton, graphVisible, graphButton, fileInputDisplay, fileInputDisabled, controlsDisplay, helpDisplay, helpButton, blockScreenDisplay} = this.state;
 
     return (
       <div id='map'>
@@ -994,16 +1065,16 @@ class App extends Component {
           <div className='welcomeBox'>
             <p><b>trajVis:</b> Visualise, animate and create videos of animal movement data from GPS tags.</p>
             <p>To begin,&ensp;
-              <label className='customFileInputTxt'>select a csv file
-                <input id='defaultFileInput' type='file' accept='.csv' onChange={this.inputData} disabled={fileInputDisabled} />
+              <label className='fileInputTxt'>select a csv file
+                <input type='file' accept='.csv' onInput={this.inputData} disabled={fileInputDisabled} />
               </label>
             &ensp;with movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
-            <p>You can also download a <a href='https://github.com/internetofelephants/trajvis/raw/sample_csv/website/simulated_data.csv' download target='_blank'>sample file</a> to get you started (after viewing the sample data, you'll have to reload this page to select a different file).</p>
+            <p>You can also download a <a href='https://github.com/internetofelephants/trajvis/raw/sample_csv/website/simulated_data.csv' download target='_blank'>sample file</a> to get you started.</p>
             <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a>.</p>
             <div className='fileInput'>
-              <label className='customFileInputBtn' title='Click to select a file'>
-                <input id='defaultFileInput' type='file' accept='.csv' onChange={this.inputData} disabled={fileInputDisabled} />
+              <label className='fileInputBtnBig' title='Click to select a file'>
+                <input type='file' accept='.csv' onInput={this.inputData} disabled={fileInputDisabled} />
               </label>
             </div>
             <div className='ioeLogoBig'>
@@ -1014,7 +1085,7 @@ class App extends Component {
         <div className='counter' style={{color: counterColour, textShadow: counterShadow}}>
           <p>{counterTime}</p>
         </div>
-        <div className='dataLoadingProgress' style={{display: progDisplay}}>
+        <div className='dataLoadingProgress' style={{display: progDisplay, color: counterColour}}>
           <p>File: {progFileName}</p>
           <p className='readingData'>Status: reading data
             {progDots.map((index) => (
@@ -1031,6 +1102,9 @@ class App extends Component {
           <button title='tracks' id={trackButton} className='button' onClick={this.trackVisibility}></button>
           <button title='graph' id={graphButton} className='button' onClick={this.graphVisibility}></button>
           <button title='map styles' id='mapIcon' className='button' onClick={this.toggleMapStyle}></button>
+          <label className='fileInputBtn' title='change dataset'>
+            <input type='file' accept='.csv' onClick={this.stopPlaybackAndRec} onInput={this.inputData} disabled={fileInputDisabled} />
+          </label>
           <button title='help' id={helpButton} className='button' onClick={this.showHelp}></button>
         </div>
         <div className='ioeLogoSmall' style={{display: controlsDisplay}}>
@@ -1067,14 +1141,15 @@ class App extends Component {
               <li>Show data as <b>lines</b> (on by default)</li>
               <li>Show <b>graph</b> with cumulative distance</li>
               <li>Switch between <b>base maps</b>: light, dark and satellite (<a href='https://www.mapbox.com/' target='_blank'>Mapbox</a>)</li>
+              <li>Load a <b>new dataset</b> (will remove current data)</li>
             </ul>
             <p>Switch lines and points on or off for each individual by clicking the buttons to the right</p>
-            <p>To add a different data set, refresh your browser</p>
             <hr></hr>
             <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a></p>
             <p>Copyright (c) 2021, <a href='https://www.internetofelephants.com/' target='_blank'>Internet of Elephants</a></p>
           </div>
         </div>
+        <div className='blockScreen' style={{display: blockScreenDisplay}}></div>
       </div>
     );
   }
