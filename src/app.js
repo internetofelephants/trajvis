@@ -1070,7 +1070,7 @@ class App extends Component {
               </label>
             &ensp;with movement data for a single or multiple individuals.</p>
             <p>File must contain the following headers: species, animal_id, timestamp [as YYYY-MM-DD HH:MM:SS], lon, lat, and (optional) alt</p>
-            <p>You can also download a <a href='https://github.com/internetofelephants/trajvis/raw/sample_csv/website/simulated_data.csv' download target='_blank'>sample file</a> to get you started.</p>
+            <p>You can also download a <a href='https://raw.githubusercontent.com/internetofelephants/trajvis/main/website/simulated_data.csv' download target='_blank'>sample file</a> to get you started.</p>
             <p>For feature requests, contributing code or reporting bugs, visit our <a href='https://github.com/internetofelephants/trajvis' target='_blank'>GitHub page</a>.</p>
             <div className='fileInput'>
               <label className='fileInputBtnBig' title='Click to select a file'>
